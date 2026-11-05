@@ -1,17 +1,17 @@
 #!/bin/bash
-# Native macOS checks for the running Mr. Mak Workspace app (menus, shortcuts,
+# Native macOS checks for the running Dev Space app (menus, shortcuts,
 # Dock reopen, global recall shortcut). It drives the real app through
 # Accessibility and reads results from the accessibility tree; no screenshots.
 #
 # Needs: the app running, Accessibility permission for the calling terminal,
 # and the screen to itself for ~30 s (keyboard shortcuts only reach the
-# frontmost app). Every keystroke first checks that Mr. Mak is frontmost and is
+# frontmost app). Every keystroke first checks that Dev Space is frontmost and is
 # skipped otherwise, so it never types into another application.
 #
 #   ./scripts/check-macos-native.sh            # all checks
 #   ./scripts/check-macos-native.sh --passive  # background-only checks (no focus)
 set -u
-APP="Mr. Mak Workspace"; PROC="mrmak-workspace"
+APP="Dev Space"; PROC="dev-space"
 pass=0; fail=0; skip=0
 ok()   { echo "PASS  $1"; pass=$((pass+1)); }
 bad()  { echo "FAIL  $1${2:+ — $2}"; fail=$((fail+1)); }
@@ -30,7 +30,7 @@ tabs() { as 'set out to ""
   return out'; }
 selected(){ tabs | awk -F'|' '$2=="true"{print $1}' | sed 's/ · .*//'; }
 tabcount(){ tabs | grep -c '|'; }
-# Activate Mr. Mak, raise a window, and send one key combo only if it is frontmost.
+# Activate Dev Space, raise a window, and send one key combo only if it is frontmost.
 key() { # key <window-suffix> <keycode> <modifiers e.g. "command down, shift down">
   osascript -e "tell application \"$APP\" to activate" -e 'delay 0.5' \
     -e "tell application \"System Events\" to tell process \"$APP\" to perform action \"AXRaise\" of (first window whose name ends with \"$1\")" >/dev/null 2>&1
@@ -51,7 +51,7 @@ if [[ "$(windows)" != *Chats* ]]; then skp "chat tabs readable" "Chats window is
 else [ -n "$(selected)" ] && ok "chat tabs readable ($(tabcount) open, selected: $(selected))" || bad "chat tabs readable"; fi
 [ "${1:-}" = "--passive" ] && { echo "== $pass passed, $fail failed, $skip skipped"; exit $((fail>0)); }
 
-echo "== interactive checks (Mr. Mak needs the screen for ~30 s)"
+echo "== interactive checks (Dev Space needs the screen for ~30 s)"
 [[ "$(windows)" == *Chats* ]] || { open -a "$APP"; sleep 1.5; }
 n=$(tabcount)
 if [ "$n" -ge 2 ]; then
@@ -94,8 +94,8 @@ press() { as "set w to first window whose name ends with \"— Workspace\"
     end try
   end repeat
   return \"not found\""; }
-toggle() { r=$(press "shows Mr. Mak"); [ "$r" = pressed ] && { echo pressed; return; }
-  [ "$(press "Toggle settings" 0)" = pressed ] && opened_settings=1; sleep 0.8; press "shows Mr. Mak"; }
+toggle() { r=$(press "shows Dev Space"); [ "$r" = pressed ] && { echo pressed; return; }
+  [ "$(press "Toggle settings" 0)" = pressed ] && opened_settings=1; sleep 0.8; press "shows Dev Space"; }
 if [ "$was" != true ]; then t=$(toggle); sleep 0.8; fi
 if [ "$(cat "$pref" 2>/dev/null)" = true ]; then
   for i in 1 2; do as 'click (first button of window 1 whose subrole is "AXCloseButton")' >/dev/null; sleep 0.5; done

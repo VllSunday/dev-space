@@ -81,7 +81,7 @@ try {
   await phone.goto(service.mobile.origin + '/mobile/');
   await expect(phone.getByLabel('Язык интерфейса', { exact: true })).toBeVisible();
   await phone.getByLabel('Язык интерфейса', { exact: true }).selectOption('en');
-  await expect(phone.getByRole('heading', { name: 'Start in Mr. Mak Chats' })).toBeVisible();
+  await expect(phone.getByRole('heading', { name: 'Start in Dev Space Chats' })).toBeVisible();
   await phone.reload(); await expect(phone.locator('html')).toHaveAttribute('lang', 'en');
   await phone.getByLabel('Interface language', { exact: true }).selectOption('ru');
   await phone.screenshot({ path: path.join(output, 'mobile-language.png') });

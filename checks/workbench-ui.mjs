@@ -58,7 +58,23 @@ try {
   await page.waitForTimeout(700); await page.reload(); await expect(page.locator('.agent-cell')).toHaveCount(2);
   await page.getByRole('button', { name: 'Файлы, навыки и MCP', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Файлы', exact: true })).toBeVisible();
+  const tools = page.locator('.ds-tools-overlay'), toolsHandle = page.getByRole('separator', { name: 'Ширина панели инструментов', exact: true });
+  const toolsBox = await tools.boundingBox(), handleBox = await toolsHandle.boundingBox();
+  await page.mouse.move(handleBox.x + 3, handleBox.y + 100); await page.mouse.down();
+  await page.mouse.move(handleBox.x - 157, handleBox.y + 100, { steps: 8 }); await page.mouse.up();
+  await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(toolsBox.width + 160));
+  await toolsHandle.focus(); await toolsHandle.press('ArrowLeft');
+  await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(toolsBox.width + 176));
+  const expectedToolsWidth = toolsBox.width + 176;
   for (const name of ['Файлы', 'Навыки', 'MCP']) { await page.getByRole('tab', { name, exact: true }).click(); await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true'); }
+  await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(expectedToolsWidth));
+  expect(await tools.evaluate(el => getComputedStyle(el).getPropertyValue('--surface-solid').trim())).toBe('#17191d');
+  await expect.poll(async () => JSON.parse(await readFile(path.join(repo, '.devspace/settings.json'), 'utf8')).spaceLayout.toolsWidth).toBe(expectedToolsWidth);
+  await page.reload(); await page.getByRole('button', { name: 'Файлы, навыки и MCP', exact: true }).click();
+  await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(expectedToolsWidth));
+  await page.setViewportSize({ width: 640, height: 900 }); await expect(toolsHandle).toHaveAttribute('aria-valuemax', '576');
+  await expect(toolsHandle).toHaveAttribute('aria-valuenow', '576');
+  await page.setViewportSize({ width: 1600, height: 1000 }); await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(expectedToolsWidth));
   await page.getByRole('button', { name: 'Закрыть инструменты', exact: true }).click();
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   const font = (await readdir('public/fonts')).find(name => name.endsWith('.woff2'));

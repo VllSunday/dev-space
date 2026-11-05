@@ -62,6 +62,11 @@ test('project layouts persist separately; invalid layouts do not replace a saved
     const bad=structuredClone(layout);bad.root.ratio=0;assert.equal((await request('/agent-layout',{projectId:project.id,layout:bad})).status,400);
     const stored=JSON.parse(await readFile(path.join(repo,'.devspace/settings.json'),'utf8'));
     assert.deepEqual(stored.agentLayouts[project.id],layout);
+    let settings=await (await request('/settings',{spaceLayout:{projectId:project.id,topicId:'all',toolsWidth:736}})).json();
+    assert.equal(settings.spaceLayout.toolsWidth,736);
+    settings=await (await request('/settings',{spaceLayout:{projectId:project.id,topicId:'all',agentWidth:640}})).json();
+    assert.equal(settings.spaceLayout.toolsWidth,736);
+    assert.equal(JSON.parse(await readFile(path.join(repo,'.devspace/settings.json'),'utf8')).spaceLayout.toolsWidth,736);
     assert.equal((await fetch(service.origin+'/api/appearance/fonts')).status,401);
   }finally{await service.close();}
 });

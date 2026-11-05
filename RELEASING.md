@@ -1,45 +1,37 @@
-# Releases
+# Выпуск Dev Space
 
-`scripts/publish-github.mjs` publishes this independent source checkout using the
-existing GitHub CLI login. Run it from a terminal with normal GitHub connectivity:
+`scripts/publish-github.mjs` публикует исходники и запускает сборки, используя существующий вход GitHub CLI. Запускайте из терминала с доступом к GitHub:
 
 ```powershell
 node scripts/publish-github.mjs
 ```
 
-The script creates `VllSunday/dev-space` as a private repository if it is absent,
-checks the owner and independent history, pushes `main` and the version tag, and
-waits for `.github/workflows/release-build.yml`. It does not change proxy settings,
-copy access tokens, force-push, or alter the old local checkout.
+Проверка подготовленных исходников без публикации: `node scripts/publish-github.mjs --check`.
 
-The workflow uses the original project's packaging approach with the new product
-name, executable and icons:
+Сценарий создаёт `VllSunday/dev-space` как приватный самостоятельный репозиторий, если его ещё нет. Затем проверяет владельца и историю, отправляет `main` и тег версии, ожидает workflow и сверяет загруженные пакеты. Обновление main допускается только вперёд по истории; дополнительные изменения на сервере требуют предварительного объединения. Принудительная перезапись не применяется.
 
-| Platform | Runner | Packages |
+## Платформы
+
+| Платформа | Runner | Пакеты |
 |---|---|---|
-| Windows x64 | windows-latest | NSIS installer, launcher, portable ZIP with runtime |
-| Linux x86_64 | ubuntu-22.04 | launcher, AppImage, portable tar.gz with runtime |
-| macOS Apple Silicon | macos-15 | DMG and app ZIP |
-| macOS Intel | macos-15-intel | DMG and app ZIP |
+| Windows x64 | windows-latest | NSIS, launcher, portable ZIP с runtime |
+| Linux x86_64 | ubuntu-22.04 | launcher, AppImage, portable tar.gz с runtime |
+| macOS arm64 | macos-15 | DMG и архив приложения |
+| macOS x64 | macos-15-intel | DMG и архив приложения |
 
-Build jobs have read-only repository access. Only the final publication job can
-write release assets. It runs after all four native builds succeed and includes
-`SHA256SUMS.txt`. Packages contain the app's MIT notice, third-party notices and
-the packaged runtime's licenses. macOS uses ad-hoc signing; no Apple Developer
-certificate or notarization credentials are included.
+Сборочные задания имеют доступ к репозиторию только для чтения. Финальное задание публикует релиз после успешного завершения всех четырёх сборок. Оно добавляет `SHA256SUMS.txt` и использует описание из `release-notes/<версия>.md`.
 
-The publishing script verifies the uploaded source, expected release packages,
-and SHA-256 of every downloaded package. Only then does it remove the explicitly
-requested old fork `VllSunday/workspace-for-game-dev`, after checking its fixed
-repository ID, owner and fork status. A failed build, download or checksum leaves
-that fork in place. Insufficient GitHub delete permission also leaves it intact.
-The old local source and uncommitted work are always preserved.
+Пакеты содержат MIT-уведомление приложения, лицензии runtime, Node, шрифтов, Three.js и Draco. macOS использует ad-hoc подпись без Apple notarization. Доступ с телефона работает через браузер и сопряжение с компьютером; APK/IPA не создаются.
 
-Results are saved locally to `release/publication-result.json`; downloaded
-packages are stored in `release/github-vVERSION/`. Both stay outside Git.
+## Подготовка версии
 
-For later releases, update the version in package.json, package-lock.json,
-src-tauri/Cargo.toml, Cargo.lock and tauri.conf.json, commit the reviewed changes,
-and push a new `vMAJOR.MINOR.PATCH` tag. The workflow can also rebuild an existing
-tag through its `workflow_dispatch` input. Never reuse a version tag for different
-source code.
+1. Обновите версию в package.json, package-lock.json, Cargo.toml, Cargo.lock и tauri.conf.json.
+2. Добавьте описание в release-notes и выполните проверки.
+3. Закоммитьте изменения. В Git не должны попасть секреты, разговоры, пользовательские проекты, локальные примеры, runtime или веса моделей.
+4. Опубликуйте через сценарий. При настроенном origin также можно отправить новый тег `vMAJOR.MINOR.PATCH`.
+
+Опубликованный тег не переносится на другой коммит. Workflow можно повторить для существующего тега через workflow_dispatch.
+
+Результат проверки сохраняется локально в `release/publication-result.json`, скачанные пакеты — в `release/github-vVERSION/`. Эти файлы исключены из Git.
+
+Дополнительные однократные операции переноса разрешены только отдельным локальным файлом `release/migration-cleanup.json`. Они выполняются после проверки всех пакетов, требуют точного ID, владельца и статуса источника и не затрагивают локальные каталоги. Без этого файла сценарий ничего не удаляет.

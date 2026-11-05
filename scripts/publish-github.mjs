@@ -8,7 +8,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const owner = 'VllSunday', repository = `${owner}/dev-space`;
-const oldFork = `${owner}/workspace-for-game-dev`, oldForkId = 1446593957;
+// Optional, private one-time migration instructions; never distributed in Git.
+const cleanupFile = path.join(root, 'release', 'migration-cleanup.json');
+const cleanup = existsSync(cleanupFile) ? JSON.parse(readFileSync(cleanupFile, 'utf8')) : null;
+if (cleanup && (!new RegExp(`^${owner}/[A-Za-z0-9_.-]+$`).test(cleanup.repository) || cleanup.repository === repository || !Number.isSafeInteger(cleanup.repositoryId) || cleanup.removeAfterVerifiedRelease !== true)) throw Error('Invalid migration cleanup instructions');
 const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error('Invalid release version');
 const tag = `v${version}`;
@@ -46,7 +49,11 @@ else if (origin.stdout.trim() !== url) throw Error('Origin points to another rep
 // Per-command credential helper: no global Git configuration or token copies.
 const credentialArgs = ['-c', 'credential.helper=', '-c', `credential.helper=!"${gh}" auth git-credential`];
 const branch = api(`repos/${repository}/commits/main`, { allowFailure: true, allowEmpty: true });
-if (branch && branch.sha !== head) throw Error('Remote main differs from the prepared source. No force push was attempted.');
+if (branch && branch.sha !== head) {
+  command('git', [...credentialArgs, 'fetch', '--no-tags', 'origin', 'main']);
+  const ancestor = command('git', ['merge-base', '--is-ancestor', branch.sha, head], { allowFailure: true });
+  if (ancestor.status !== 0) throw Error('Remote main has additional changes. Review and merge them before publishing. No force push was attempted.');
+}
 const localTag = command('git', ['rev-parse', '--verify', `refs/tags/${tag}`], { allowFailure: true });
 if (localTag.status === 0 && localTag.stdout.trim() !== head) throw Error('Local release tag points to a different commit');
 if (localTag.status !== 0) git('tag', tag, head);
@@ -90,12 +97,14 @@ for (const name of expected.filter(name => name !== 'SHA256SUMS.txt')) {
 writeFileSync(path.join(root, 'release', 'publication-result.json'), JSON.stringify({ repository, tag, commit: head, release: release.html_url, assets: expected, verifiedAt: new Date().toISOString() }, null, 2));
 console.log(`Release and all ${expected.length - 1} packages verified: ${release.html_url}`);
 
-// User explicitly requested removal of this exact fork, after successful transfer.
-const old = api(`repos/${oldFork}`, { allowFailure: true });
-if (old) {
-  if (old.id !== oldForkId || !old.fork || old.owner?.login.toLowerCase() !== owner.toLowerCase()) throw Error('Old fork identity does not match; deletion refused');
-  api(`repos/${oldFork}`, { method: 'DELETE' });
-  if (api(`repos/${oldFork}`, { allowFailure: true })) throw Error('Could not verify old fork removal');
-  console.log(`Removed the verified old fork: ${oldFork}. Its local checkout is unchanged.`);
+// Cleanup is opt-in through a separately prepared private migration file.
+if (cleanup) {
+  const old = api(`repos/${cleanup.repository}`, { allowFailure: true });
+  if (old) {
+    if (old.id !== cleanup.repositoryId || !old.fork || old.owner?.login.toLowerCase() !== owner.toLowerCase()) throw Error('Migration source identity does not match; deletion refused');
+    api(`repos/${cleanup.repository}`, { method: 'DELETE' });
+    if (api(`repos/${cleanup.repository}`, { allowFailure: true })) throw Error('Could not verify migration cleanup');
+    console.log(`Removed the verified migration source: ${cleanup.repository}. Its local checkout is unchanged.`);
+  }
 }
 console.log('Publication complete.');

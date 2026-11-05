@@ -43,7 +43,7 @@ export class TailscaleTransport {
     let port = previous?.hostname === status.hostname && this.owns(config, previous) ? previous.port : null;
     if (!port) port = [8443, 8444, 8445, 8446].find(value => !config.TCP?.[value] && !Object.keys(config.Web || {}).some(key => key.endsWith(`:${value}`)));
     if (!port) throw new Error('Tailscale HTTPS ports 8443–8446 are already in use. Free one of these ports and try again.');
-    if (config.AllowFunnel?.[`${status.hostname}:${port}`]) throw new Error('This Tailscale port is publicly shared. Turn off Funnel for this port before connecting Mr. Mak.');
+    if (config.AllowFunnel?.[`${status.hostname}:${port}`]) throw new Error('This Tailscale port is publicly shared. Turn off Funnel for this port before connecting Dev Space.');
     try { await this.command(['serve', '--bg', '--yes', `--https=${port}`, target]); }
     catch {
       const hint = process.platform === 'win32' ? ' Windows may require an administrator terminal for the initial Serve setup.' : process.platform === 'darwin' ? ' Make sure the Tailscale app is running and signed in.' : '';

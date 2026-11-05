@@ -105,7 +105,7 @@ try {
     const response = await fetch(`${service.mobile.origin}${icon.src}`);
     assert.equal(response.status, 200); assert.match(response.headers.get('content-type'), /image\/png/);
   }
-  await desktop.getByAltText('Scan to connect this phone to Mr. Mak').waitFor();
+  await desktop.getByAltText('Scan to connect this phone to Dev Space').waitFor();
   await desktop.screenshot({ path: path.join(repo, 'desktop-pairing.png') });
   const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   await mobileContext.addInitScript(() => localStorage.setItem('mrmak.language', 'en'));
@@ -175,7 +175,7 @@ try {
   // Open from another site like a QR scanner, rather than an address-bar visit.
   qrSource = http.createServer((_request, response) => {
     response.writeHead(200, { 'Content-Type': 'text/html' });
-    response.end(`<a href="${pairing.url}">Open Mr. Mak</a>`);
+    response.end(`<a href="${pairing.url}">Open Dev Space</a>`);
   });
   await new Promise(resolve => qrSource.listen(0, 'localhost', resolve));
   await phone.goto(`http://localhost:${qrSource.address().port}`);
@@ -189,7 +189,7 @@ try {
     };
     service.mobile.server.on('request', inspect);
   });
-  await phone.getByRole('link', { name: 'Open Mr. Mak' }).click();
+  await phone.getByRole('link', { name: 'Open Dev Space' }).click();
   assert.equal(await navigationSite, 'cross-site');
   await phone.getByRole('button', { name: 'Request connection' }).click();
   await phone.getByRole('heading', { name: 'Confirm on your computer' }).waitFor();
@@ -235,17 +235,17 @@ try {
     event.userChoice = Promise.resolve({ outcome: 'dismissed' });
     window.dispatchEvent(event);
   });
-  await phone.getByRole('complementary', { name: 'Install Mr. Mak' }).waitFor();
+  await phone.getByRole('complementary', { name: 'Install Dev Space' }).waitFor();
   assert.equal(await phone.evaluate(() => window.installCalls), 0, 'Never open installation without a tap');
   await phone.screenshot({ path: path.join(repo, 'phone-install.png') });
   await phone.getByRole('button', { name: 'Not now', exact: true }).click();
-  assert.equal(await phone.getByRole('complementary', { name: 'Install Mr. Mak' }).count(), 0);
+  assert.equal(await phone.getByRole('complementary', { name: 'Install Dev Space' }).count(), 0);
   await phone.getByRole('button', { name: 'Phone settings' }).click();
   const speechProvider = phone.getByRole('combobox', { name: 'Dictation provider' });
   await speechProvider.selectOption('local'); await expect(speechProvider).toHaveValue('local');
   await phone.getByText(/Local Whisper needs setup on your computer/).waitFor();
   await speechProvider.selectOption('openrouter'); await expect(speechProvider).toHaveValue('openrouter');
-  await phone.getByRole('button', { name: 'Install Mr. Mak', exact: true }).click();
+  await phone.getByRole('button', { name: 'Install Dev Space', exact: true }).click();
   assert.equal(await phone.evaluate(() => window.installCalls), 1);
   await phone.getByRole('button', { name: 'Phone settings' }).click();
   await phone.evaluate(() => {
@@ -254,10 +254,10 @@ try {
     event.userChoice = Promise.resolve({ outcome: 'accepted' });
     window.dispatchEvent(event);
   });
-  assert.equal(await phone.getByRole('complementary', { name: 'Install Mr. Mak' }).count(), 0, 'Not now persists for this session');
+  assert.equal(await phone.getByRole('complementary', { name: 'Install Dev Space' }).count(), 0, 'Not now persists for this session');
   await phone.getByRole('button', { name: 'Phone settings' }).click();
-  await phone.getByRole('button', { name: 'Install Mr. Mak', exact: true }).click();
-  await phone.getByText('Mr. Mak is installed on this phone.', { exact: true }).waitFor();
+  await phone.getByRole('button', { name: 'Install Dev Space', exact: true }).click();
+  await phone.getByText('Dev Space is installed on this phone.', { exact: true }).waitFor();
   await phone.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
   await phone.getByRole('button', { name: 'Phone settings' }).click();
 
@@ -860,7 +860,7 @@ try {
   await desktop.locator(`[data-chat-tab="${ids[0]}"]`).waitFor();
   await desktop.getByRole('button', { name: 'Mobile access', exact: true }).click();
   await desktop.getByRole('button', { name: 'Disconnect', exact: true }).click();
-  await phone.getByRole('heading', { name: 'Start in Mr. Mak Chats' }).waitFor();
+  await phone.getByRole('heading', { name: 'Start in Dev Space Chats' }).waitFor();
   assert.equal(service.sessions.get(ids[0]).status, 'running'); assert.equal(service.sessions.get(ids[1]).status, 'running');
   if (navigationCancellations.length) console.log(`Expected WebKit read cancellations during reload: ${navigationCancellations.length}`);
   assert.deepEqual(errors, []);

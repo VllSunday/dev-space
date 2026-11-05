@@ -121,8 +121,8 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       const latestRequest = requestText || coordinator.operations.get(operationId)?.text || '';
       if (['reopen_chat', 'send_to_chat', 'attach_files'].includes(name)) {
         const target = sessions.get(args.id);
-        if (target.agent === 'shell') throw new Error('Use the local shell directly. Mr. Mak can send tasks only to agent chats.');
-        if (target.bypass && settings.defaultBypass !== true) throw new Error('This chat uses bypass permissions. Send the task directly, or enable bypass yourself in Settings before using Mr. Mak to control it.');
+        if (target.agent === 'shell') throw new Error('Use the local shell directly. Dev Space can send tasks only to agent chats.');
+        if (target.bypass && settings.defaultBypass !== true) throw new Error('This chat uses bypass permissions. Send the task directly, or enable bypass yourself in Settings before using Dev Space to control it.');
       }
       switch (name) {
         case 'list_chats': return sessions.active();
@@ -133,7 +133,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         case 'pin_chat': return sessions.pin(args.id, args.pinned);
         case 'open_chat': {
           args = openChatArguments(args);
-          if (args.bypass === true && settings.defaultBypass !== true) throw new Error('To enable bypass, choose it yourself in New chat or Settings. Mr. Mak cannot raise the selected permission level.');
+          if (args.bypass === true && settings.defaultBypass !== true) throw new Error('To enable bypass, choose it yourself in New chat or Settings. Dev Space cannot raise the selected permission level.');
           const session = await sessions.create({ agent: args.agent, cwd: args.cwd, name: taskTitle(args.name), effort: taskEffort(latestRequest, args.effort), bypass: args.bypass === false ? false : settings.defaultBypass === true });
           focus(session.id); return session;
         }
@@ -203,7 +203,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   function authorize(request) {
     if (request.headers.host !== new URL(origin).host) throw Object.assign(new Error('Unexpected host'), { status: 403 });
     if (request.headers.origin && request.headers.origin !== origin) throw Object.assign(new Error('Unexpected origin'), { status: 403 });
-    if (!equalSecret(request.headers.authorization, `Bearer ${token}`)) throw Object.assign(new Error('Open Mr. Mak from its desktop launcher'), { status: 401 });
+    if (!equalSecret(request.headers.authorization, `Bearer ${token}`)) throw Object.assign(new Error('Open Dev Space from its desktop launcher'), { status: 401 });
   }
   const server = http.createServer(async (request, response) => {
     try {
@@ -360,7 +360,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         }
         if (method === 'POST' && url.pathname === '/api/settings') {
           if (data.display !== undefined) settings.display = displaySettings(data.display, settings.display);
-          if (data.spaceLayout && typeof data.spaceLayout === 'object') { const value=data.spaceLayout; settings.spaceLayout={projectId: String(value.projectId||'').slice(0,100),topicId:String(value.topicId||'all').slice(0,100),collapsed:!!value.collapsed,agentOpen:!!value.agentOpen,agentWidth:Math.max(320,Math.min(1400,Number(value.agentWidth)||500)),agentWide:!!value.agentWide}; }
+          if (data.spaceLayout && typeof data.spaceLayout === 'object') { const value=data.spaceLayout; settings.spaceLayout={projectId: String(value.projectId||'').slice(0,100),topicId:String(value.topicId||'all').slice(0,100),collapsed:!!value.collapsed,agentOpen:!!value.agentOpen,agentWidth:Math.max(320,Math.min(1400,Number(value.agentWidth)||500)),agentWide:!!value.agentWide,toolsWidth:Math.max(320,Math.min(10000,Number(value.toolsWidth)||settings.spaceLayout?.toolsWidth||520))}; }
           if (inventory().some(item => item.id === data.defaultAgent)) settings.defaultAgent = data.defaultAgent;
           if (typeof data.defaultBypass === 'boolean') settings.defaultBypass = data.defaultBypass;
           if (Number.isInteger(data.terminalFontSize) && data.terminalFontSize >= 10 && data.terminalFontSize <= 24) settings.terminalFontSize = data.terminalFontSize;

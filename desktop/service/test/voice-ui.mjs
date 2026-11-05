@@ -45,7 +45,7 @@ try {
     await page.getByRole('button', { name: 'Dismiss voice error' }).click();
     assert.equal(await page.getByRole('alert').count(), 0);
     assert.equal(await page.evaluate(() => window.fixtureMicRequests), 1);
-    const input = page.getByRole('textbox', { name: 'Message Mr. Mak' });
+    const input = page.getByRole('textbox', { name: 'Message Dev Space' });
     const before = requests.length;
     await input.fill('First line'); await input.press('Shift+Enter'); await input.pressSequentially('Second line');
     assert.equal(await input.inputValue(), 'First line\nSecond line'); assert.equal(requests.length, before);
@@ -84,7 +84,7 @@ try {
     assert.deepEqual(await readFile(saved), Buffer.from(imageBase64, 'base64'));
     await page.getByLabel('Sent images', { exact: true }).last().locator('img').waitFor();
 
-    await page.locator('input[type=file][aria-label="Choose images for Mr. Mak"]').setInputFiles({ name: 'Reference.png', mimeType: 'image/png', buffer: Buffer.from(imageBase64, 'base64') });
+    await page.locator('input[type=file][aria-label="Choose images for Dev Space"]').setInputFiles({ name: 'Reference.png', mimeType: 'image/png', buffer: Buffer.from(imageBase64, 'base64') });
     await attached.locator('img').waitFor();
     await attached.getByRole('button', { name: /^Remove / }).click();
     assert.equal(await attached.count(), 0);

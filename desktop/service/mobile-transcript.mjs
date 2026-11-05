@@ -25,7 +25,7 @@ export function transcriptActivity(records, agent) {
 
 const textParts = content => typeof content === 'string' ? content : Array.isArray(content) ? content.filter(part => ['text', 'input_text', 'output_text'].includes(part?.type)).map(part => part.text || '').join('\n') : '';
 
-// Claude Code records a bracketed paste, which is how Mr. Mak delivers phone and
+// Claude Code records a bracketed paste, which is how Dev Space delivers phone and
 // Conversation messages, inside matching <pasted_content id="…"> tags. Show the
 // text the user wrote; an unmatched tag is left as written.
 export function unwrapPastes(text) {

@@ -109,7 +109,7 @@ export class Sessions extends EventEmitter {
   }
 
   async create(options) {
-    if (this.closed) throw new Error('Mr. Mak is shutting down');
+    if (this.closed) throw new Error('Dev Space is shutting down');
     if (this.active().length >= 80) throw new Error('Close a tab before opening another (80 open tab limit). Closed chats remain in History.');
     const agent = String(options.agent || 'codex');
     nativeConversationId(options.resumeId);
@@ -380,9 +380,9 @@ export class Sessions extends EventEmitter {
   input(id, data, { coordinator = false, submit = false } = {}) {
     const session = this.get(id);
     if (!session.process) throw new Error('This terminal is stopped. Resume it before sending a message.');
-    if (coordinator && session.agent === 'shell') throw new Error('Mr. Mak can send messages to agent chats; type shell commands directly in the local shell.');
+    if (coordinator && session.agent === 'shell') throw new Error('Dev Space can send messages to agent chats; type shell commands directly in the local shell.');
     if (typeof data !== 'string' || data.length > 64000) throw new Error('Message is too large');
-    if (coordinator && Date.now() - Date.parse(session.lastInputAt || 0) < 2500) throw new Error('You are typing in this chat. Wait a moment before sending through Mr. Mak.');
+    if (coordinator && Date.now() - Date.parse(session.lastInputAt || 0) < 2500) throw new Error('You are typing in this chat. Wait a moment before sending through Dev Space.');
     if (coordinator) {
       // Bracketed paste keeps multi-line text a single CLI prompt, then Enter submits it.
       const clean = data.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').replaceAll('\r', '');
@@ -406,7 +406,7 @@ export class Sessions extends EventEmitter {
     return { delivered: true, sessionId: id, name: session.name, note: 'Text delivered to the terminal. Check the screen for CLI readiness or permission prompts; delivery does not confirm the agent accepted the task.' };
   }
 
-  // Keys Mr. Mak presses on the user's behalf, such as menu navigation. They are
+  // Keys Dev Space presses on the user's behalf, such as menu navigation. They are
   // not manual typing, so a message sent right after them is not held back.
   keys(id, data) {
     const session = this.get(id);
@@ -553,7 +553,7 @@ export class Sessions extends EventEmitter {
   }
   async resume(id, nativeId) {
     nativeConversationId(nativeId);
-    if (this.closed) throw new Error('Mr. Mak is shutting down');
+    if (this.closed) throw new Error('Dev Space is shutting down');
     const session = this.get(id);
     if (session.stopping) await session.stopping;
     if (session.process) return publicSession(session);

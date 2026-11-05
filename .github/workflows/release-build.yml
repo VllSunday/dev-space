@@ -207,6 +207,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release-*
@@ -227,11 +232,13 @@ jobs:
             echo "Release tags must use vMAJOR.MINOR.PATCH" >&2
             exit 1
           fi
+          notes_path="release-notes/${RELEASE_TAG#v}.md"
           if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release create "${RELEASE_TAG}" \
-              --title "Dev Space ${RELEASE_TAG}" \
-              --generate-notes \
-              --verify-tag
+            if [ -f "${notes_path}" ]; then
+              gh release create "${RELEASE_TAG}" --title "Dev Space ${RELEASE_TAG}" --notes-file "${notes_path}" --verify-tag
+            else
+              gh release create "${RELEASE_TAG}" --title "Dev Space ${RELEASE_TAG}" --generate-notes --verify-tag
+            fi
           fi
 
           find release-assets -type f -print0 | xargs -0 gh release upload "${RELEASE_TAG}" --clobber

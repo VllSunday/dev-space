@@ -18,7 +18,7 @@ export const themes = [
 ];
 
 const defaults = [
-  { id: 'dark', name: 'Dark', description: 'The original Mr. Mak palette.', scheme: 'dark', bg: '#0a0a0c', deep: '#060608', panel: '#131316', raised: '#232329', text: '#ececf1', muted: '#a5a5b1', accent: '#f0a0b0', secondary: '#b794f4' },
+  { id: 'dark', name: 'Dark', description: 'The original Dev Space palette.', scheme: 'dark', bg: '#0a0a0c', deep: '#060608', panel: '#131316', raised: '#232329', text: '#ececf1', muted: '#a5a5b1', accent: '#f0a0b0', secondary: '#b794f4' },
   { id: 'light', name: 'Light', description: 'White surfaces with dark ink.', scheme: 'light', bg: '#f7f8fa', deep: '#eef0f4', panel: '#ffffff', raised: '#e8ebf1', text: '#232735', muted: '#505b70', accent: '#98445e', secondary: '#6b48a4' },
 ];
 export const palettes = [...defaults, ...themes];

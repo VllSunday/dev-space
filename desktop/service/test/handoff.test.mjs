@@ -16,6 +16,10 @@ test('a handoff is the reply to the latest request, from its heading', () => {
   assert.equal(handoffText(messages), '# Handoff\n## Goal\nShip it');
   assert.equal(handoffText(messages.slice(0, 1)), null);
   assert.equal(handoffText([{ role: 'assistant', text: '# Handoff\nUnrequested' }]), null);
+  assert.equal(handoffText([
+    {role:'user',text:'Previous coordinator handoff request: this conversation is getting long. Write a handoff for a fresh chat that will continue this work in the same project. Do not change files or run commands.'},
+    {role:'assistant',text:'# Handoff\nRetained transcript'}
+  ]),'# Handoff\nRetained transcript');
 });
 
 test('a first message is one safe argument, placed before Claude\'s variadic --add-dir', async () => {

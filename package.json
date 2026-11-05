@@ -1,7 +1,7 @@
 {
   "name": "dev-space",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "postinstall": "npm --prefix desktop/service ci && node scripts/fix-pty-permissions.mjs",

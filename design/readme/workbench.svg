@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="780" viewBox="0 0 1440 780" role="img" aria-labelledby="title desc">
+<title id="title">Dev Space · схема рабочего окна</title><desc id="desc">Слева проекты и темы. Рядом четыре панели агентов. Справа материалы проекта и регулируемая панель инструментов.</desc>
+<style>text{font-family:Segoe UI,Arial,sans-serif;font-size:16px;fill:#eeeeef}.muted{fill:#a2a3a6}.small{font-size:14px}.code{font-family:Consolas,monospace;font-size:14px}.rule{stroke:#303236;stroke-width:1}.surface{fill:#17191d;stroke:#303236}.soft{fill:#25272b}.accent{fill:#96b2d7}</style>
+<rect width="1440" height="780" rx="12" fill="#101114"/>
+<rect x="18" y="17" width="18" height="18" rx="3" fill="none" stroke="#96b2d7"/><path d="M23 18V34" stroke="#96b2d7"/>
+<text x="47" y="31" font-weight="600">Dev Space</text><text x="1100" y="31" class="muted small">Поиск и команды</text><text x="1353" y="31" class="muted small">Ctrl K</text>
+<rect x="8" y="49" width="190" height="721" rx="7" class="surface"/>
+<text x="25" y="79" font-weight="600">Мой проект</text><text x="25" y="126" class="muted">Все материалы</text><text x="25" y="164" class="muted">Без темы</text>
+<text x="25" y="219" class="small muted">Темы</text><rect x="17" y="234" width="172" height="36" rx="4" class="soft"/>
+<text x="29" y="258">Интерфейс</text><text x="29" y="298" class="muted">Разработка</text><text x="29" y="338" class="muted">Проверки</text>
+<text x="25" y="399" class="small muted">Страницы</text><text x="29" y="437" class="muted">Обзор проекта</text><text x="29" y="475" class="muted">Решения</text>
+<path d="M24 563H183" class="rule"/><text x="25" y="593" class="small muted">Агенты</text>
+<circle cx="31" cy="624" r="4" fill="#e5c07b"/><text x="45" y="630" class="small">Реализация</text><circle cx="31" cy="661" r="4" fill="#9cc5a3"/><text x="45" y="667" class="small">Проверка</text><text x="25" y="749" class="small muted">Локально</text>
+<rect x="206" y="49" width="578" height="721" rx="7" class="surface"/><text x="222" y="78" class="small muted">Агенты</text><text x="657" y="78" class="small muted">4 панели</text>
+<rect x="214" y="96" width="277" height="325" rx="5" fill="#131518" stroke="#96b2d7"/><rect x="500" y="96" width="277" height="325" rx="5" fill="#131518" stroke="#303236"/>
+<rect x="214" y="430" width="277" height="331" rx="5" fill="#131518" stroke="#303236"/><rect x="500" y="430" width="277" height="331" rx="5" fill="#131518" stroke="#303236"/>
+<text x="229" y="124" class="small">Codex · Реализация</text><path d="M215 139H490" class="rule"/><text x="230" y="173" class="code accent">&gt; Открыт проект</text><text x="230" y="204" class="code muted">Изменения интерфейса</text><text x="230" y="237" class="code muted">Терминальная сессия</text><text x="230" y="397" class="small muted">Работает</text>
+<text x="515" y="124" class="small">Claude · Проверка</text><path d="M501 139H776" class="rule"/><text x="516" y="173" class="code accent">&gt; Проверка изменений</text><text x="516" y="204" class="code muted">Контекст проекта</text><text x="516" y="397" class="small muted">Нужен ответ</text>
+<text x="229" y="458" class="small">Терминал</text><path d="M215 473H490" class="rule"/><text x="230" y="510" class="code muted">&gt; _</text>
+<text x="515" y="458" class="small muted">Свободная панель</text><text x="534" y="596" class="small muted">Перенесите вкладку</text><text x="547" y="622" class="small muted">или откройте агента</text>
+<rect x="793" y="49" width="639" height="721" rx="7" fill="#131518" stroke="#303236"/><text x="814" y="78" class="small muted">Мой проект / Интерфейс</text><path d="M794 94H1431" class="rule"/>
+<text x="821" y="146" font-size="25" font-weight="600">Материалы проекта</text><text x="821" y="176" class="small muted">Заметки, ссылки и вложения</text>
+<path d="M818 201H1410" class="rule"/><text x="821" y="238">Сценарий работы</text><text x="821" y="268" class="small muted">Собрать материал → оформить страницу</text><path d="M818 294H1410" class="rule"/>
+<text x="821" y="334">Референсы интерфейса</text><text x="821" y="364" class="small muted">Изображения и комментарии</text><path d="M818 390H1410" class="rule"/>
+<rect x="818" y="650" width="590" height="96" rx="6" class="surface"/><text x="835" y="680" class="small muted">Записать мысль или перетащить файл…</text><text x="1210" y="725" class="small muted">Ctrl Enter</text>
+<rect x="1100" y="107" width="319" height="504" rx="7" class="surface"/><path d="M1102 118V600" stroke="#96b2d7" stroke-width="2"/>
+<text x="1120" y="139" font-weight="600">Инструменты</text><text x="1390" y="139" class="muted">×</text><path d="M1102 155H1418" class="rule"/>
+<rect x="1115" y="167" width="95" height="34" rx="4" class="soft"/><text x="1131" y="190" class="small">Файлы</text><text x="1225" y="190" class="small muted">Навыки</text><text x="1330" y="190" class="small muted">MCP</text><path d="M1102 215H1418" class="rule"/>
+<text x="1120" y="248" class="small muted">Основные папки</text><rect x="1115" y="265" width="288" height="34" rx="4" fill="#131518" stroke="#303236"/><text x="1126" y="288" class="small muted">Найти файл…</text>
+<text x="1120" y="331" class="small">▾ Мой проект</text><text x="1138" y="366" class="small muted">▸ src</text><text x="1138" y="401" class="small muted">▸ assets</text><text x="1138" y="436" class="small muted">README.md</text>
+<path d="M1102 561H1418" class="rule"/><text x="1120" y="587" class="small muted">Ширина меняется левым краем</text>
+</svg>

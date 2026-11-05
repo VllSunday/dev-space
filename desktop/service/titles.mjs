@@ -17,7 +17,7 @@ export function groupLabel(value) {
 export function restoredTitle(value, index) {
   if (/^(codex|claude|antigravity|agy|opencode|kimi)$/i.test(value || '')) return `Conversation ${index + 1}`;
   try { return chatTitle(value, `Conversation ${index + 1}`); }
-  catch { return /голос/i.test(value || '') ? 'Mr. Mak voice' : `Conversation ${index + 1}`; }
+  catch { return /голос/i.test(value || '') ? 'Dev Space voice' : `Conversation ${index + 1}`; }
 }
 
 export function taskTitle(value) {

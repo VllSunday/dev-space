@@ -1,5 +1,26 @@
 # Verification record
 
+## Version 1.0.3
+
+The production TypeScript/Vite build passed with 397 modules. The focused
+48-test suite passed 46 tests and skipped two optional local-dictation tests.
+After adding saved drawer width and transcript compatibility assertions, all
+12 affected tests passed. The PowerShell updater fixture passed without
+terminating a process or modifying an installation. The new drawer's static
+design detector returned zero findings.
+
+The workbench browser check now covers pointer and keyboard resizing, persisted
+tool width, retaining a wide preference across narrow viewports, all three tools
+tabs and inherited Graphite tokens. It is wired into release CI; it was not run
+in this local session because browser launch was previously denied with EPERM.
+The README illustration is a schematic with generic content, not a screenshot;
+its SVG was parsed successfully. The local game example remains excluded.
+
+Visible product names were updated in backend errors, mobile manifest, help and
+coordinator identity text. Models, permission rules and identity-independent
+behavior were preserved. Historical handoff messages remain recognized by their
+fixed request body. LICENSE is unchanged.
+
 ## Version 1.0.2
 
 The new pane/font/Whisper tests and focused existing project, activity, language,

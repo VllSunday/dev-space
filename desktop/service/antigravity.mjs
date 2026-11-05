@@ -10,7 +10,7 @@ export function antigravityLogPath(stateDir, chatId) {
   return path.join(stateDir, 'antigravity', `${chatId}.log`);
 }
 
-// agy 1.3.4 writes these native lifecycle messages to --log-file. Each Mr. Mak
+// agy 1.3.4 writes these native lifecycle messages to --log-file. Each Dev Space
 // tab owns its log; never guess from the workspace's shared "last conversation".
 // Require the native logger prefix, not a UUID echoed by a prompt or tool.
 export function antigravityConversation(text) {

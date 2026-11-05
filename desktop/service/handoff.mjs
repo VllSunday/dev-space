@@ -3,14 +3,16 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { chatTitle } from './titles.mjs';
 
-const MARKER = 'Mr. Mak handoff request';
+const MARKER = 'Dev Space handoff request';
+// Recognize requests already present in saved transcripts by their fixed body.
+const REQUEST_BODY = ': this conversation is getting long. Write a handoff for a fresh chat that will continue this work in the same project.';
 export const HANDOFF_REQUEST = `${MARKER}: this conversation is getting long. Write a handoff for a fresh chat that will continue this work in the same project. Do not change files or run commands. Reply with Markdown only, starting with the heading "# Handoff", covering the goal, current state, decisions and their reasons, files touched, open problems and the exact next steps. Include the paths, commands and IDs a new chat needs; leave out what it can read in the repository.`;
 const WAIT = 15 * 60 * 1000;
 
 // The reply to the latest request, from its "# Handoff" heading. Earlier
 // requests and unrelated answers are never used.
 export function handoffText(messages) {
-  const request = messages.findLastIndex(item => item.role === 'user' && item.text.includes(MARKER));
+  const request = messages.findLastIndex(item => item.role === 'user' && (item.text.includes(MARKER) || item.text.includes(REQUEST_BODY)));
   if (request < 0) return null;
   const reply = messages.slice(request + 1).filter(item => item.role === 'assistant' && /^#\s*Handoff\b/im.test(item.text)).pop();
   if (!reply) return null;
