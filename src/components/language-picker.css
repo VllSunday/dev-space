@@ -1,0 +1,6 @@
+.language-picker { display: grid; gap: 8px; margin-block: 12px 20px; }
+.language-picker label { display: grid; gap: 8px; font-size: 13px; }
+.language-picker select { width: 100%; min-height: 36px; padding: 7px 10px; border: 1px solid var(--hairline-strong, #555); border-radius: 7px; background: var(--surface-1, #202127); color: var(--text, #eee); font: inherit; }
+.language-picker select:focus-visible { outline: 2px solid var(--pink, #d7aabd); outline-offset: 2px; }
+.language-picker p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-muted, #b4b4bf); }
+.language-picker [role=alert] { color: var(--red, #ed9a9f); }

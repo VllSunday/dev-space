@@ -1,0 +1,32 @@
+import { t, useLocale } from '../i18n/index.ts'
+import { useState } from 'react'
+import { setWorkspaceTheme, useWorkspaceTheme, type WorkspaceTheme, type ThemeTarget } from '../lib/workspace-theme'
+import { themes, themePalette } from '../../desktop/service/appearance.mjs'
+
+export default function ThemePicker({ target = 'workspace' }: { target?: ThemeTarget }) {
+  useLocale()
+  const { preference, resolved } = useWorkspaceTheme(target)
+  const palette = themePalette(resolved)
+  const label = target === 'chat' ? t("Chat theme") : t("Workspace theme")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const change = async (value: WorkspaceTheme) => {
+    setBusy(true); setError('')
+    try { await setWorkspaceTheme(value, target) }
+    catch (error) { setError(error instanceof Error ? error.message : String(error)) }
+    finally { setBusy(false) }
+  }
+  return <div className="workspace-theme-picker">
+    <label>{label}<select aria-label={label} value={preference} disabled={busy} onChange={event => void change(event.target.value as WorkspaceTheme)}>
+      <optgroup label={t("Inspired by your tools")}>{themes.slice(0, 3).map(theme => <option key={theme.id} value={theme.id}>{t(theme.name)}</option>)}</optgroup>
+      <optgroup label={t("More palettes")}>{themes.slice(3).map(theme => <option key={theme.id} value={theme.id}>{t(theme.name)}</option>)}</optgroup>
+      <optgroup label={t("Classic")}><option value="dark">{t("Dark")}</option><option value="light">{t("Light")}</option><option value="system">{t("System")}</option></optgroup>
+    </select></label>
+    <div className="theme-preview" aria-hidden="true" style={{ background: palette.bg, color: palette.text, borderColor: palette.muted + '55' }}>
+      <div className="theme-preview-bar" style={{ background: palette.panel }}><i style={{ background: palette.accent }} /><span>{t(palette.name)}</span><i style={{ background: palette.secondary }} /></div>
+      <div className="theme-preview-copy"><span style={{ color: palette.muted }}>{t("A clear space for your work")}</span><strong>{t("Ideas with room to grow.")}</strong><span style={{ color: palette.accent }}>Aa <span style={{ color: palette.secondary }}>Aa</span></span></div>
+    </div>
+    <p>{t(palette.description)} {target === 'chat' ? t("Applies to all chats, including Conversation and Terminal.") : t("Applies to Workspace and standard reports.")} {t("System follows your device.")}</p>
+    {error && <p role="alert">{t(error)}</p>}
+  </div>
+}

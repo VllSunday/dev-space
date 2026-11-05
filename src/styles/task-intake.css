@@ -1,0 +1,13 @@
+.task-intake{margin:auto;width:min(700px,calc(100vw - 28px));border-radius:10px}
+.task-intake .new-card-heading{margin-bottom:20px}.task-intake .new-card-heading p{font-size:13px;color:var(--text-dim);margin-top:8px}
+.intake-fields{border:0;min-width:0;display:flex;flex-direction:column;gap:17px}.intake-fields label{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.intake-fields input:not([type=file]),.intake-fields textarea{width:100%;padding:10px 12px;border:1px solid var(--hairline-strong);border-radius:6px;background:var(--bg);color:var(--text);font:inherit;font-size:14px;resize:vertical;box-sizing:border-box}
+.intake-kinds{display:flex;flex-wrap:wrap;gap:6px}.intake-kinds button[aria-pressed=true]{border-color:var(--purple);background:var(--purple-dim);color:var(--text-bright)}
+.intake-fields summary{font-size:12px;color:var(--text-dim);cursor:pointer;margin-bottom:10px}.intake-fields details label{margin:10px 0}
+.intake-drop{border:1px dashed var(--hairline-strong);border-radius:7px;padding:15px}.intake-drop span{font-size:12px;line-height:1.5;color:var(--text-dim)}.intake-drop input{font-size:12px;max-width:100%;margin-top:6px}
+.intake-attachments{list-style:none;display:flex;flex-direction:column;gap:6px}.intake-attachments li{display:flex;gap:10px;align-items:center;font-size:12px;min-width:0}.intake-attachments li span{flex:1;overflow-wrap:anywhere}.intake-attachments small{color:var(--text-dim)}
+.agent-brief{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.agent-brief button{font:inherit;font-size:12px;padding:8px 12px;border:1px solid var(--hairline-strong);border-radius:6px;color:var(--text);background:var(--surface-1);cursor:pointer}.agent-brief span{font-size:12px;color:var(--text-dim)}.agent-brief textarea{width:100%;min-height:120px;background:var(--surface-solid);color:var(--text)}
+.qa-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}.qa-shortcuts button{font:inherit;font-size:13px;color:var(--text);background:var(--surface-1);border:1px solid var(--hairline-strong);padding:9px 14px;border-radius:6px;cursor:pointer}.qa-shortcuts button:hover{border-color:var(--purple)}
+.qa-shortcuts+.agent-brief{margin-bottom:24px}
+.card-evidence-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 24px;border-bottom:1px solid var(--hairline);font-size:12px;color:var(--text-dim)}.card-evidence-bar label{display:flex;align-items:center;gap:10px;color:var(--text)}.card-evidence-bar input{max-width:220px;font-size:11px}.card-evidence-bar span{font-size:11px}
+@media(max-width:480px){.task-intake{padding:18px}.task-intake footer{flex-wrap:wrap}.intake-kinds button{padding:8px 10px}}

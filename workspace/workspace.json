@@ -1,0 +1,15 @@
+{
+  "entities": [],
+  "spaces": [
+    {
+      "id": "default",
+      "name": "Мой проект",
+      "sections": [
+        {
+          "id": "inbox",
+          "name": "Без темы"
+        }
+      ]
+    }
+  ]
+}
