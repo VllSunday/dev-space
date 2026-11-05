@@ -103,6 +103,22 @@ test('real PTY supports Unicode, reconnect snapshots, resizing, exit and saved h
   } finally { ws?.terminate(); await service.close(); }
 });
 
+test('several real terminals can exit together and retain their saved history', { timeout: 45000 }, async () => {
+  const { service, repo } = await fixture();
+  try {
+    const terminals = await Promise.all(Array.from({ length: 6 }, (_, i) => service.sessions.create({ agent: 'shell', name: `Concurrent ${i}`, cwd: repo })));
+    await Promise.all(terminals.map(terminal => terminalReady(service, terminal.id)));
+    for (const terminal of terminals) service.sessions.input(terminal.id, process.platform === 'win32' ? "Write-Output ('SAVED_' + 'CONCURRENT'); exit 0\r" : "printf 'SAVED_CONCURRENT\\n'; exit 0\r");
+    await until(() => terminals.every(terminal => service.sessions.get(terminal.id).status === 'exited'));
+    for (const terminal of terminals) {
+      const saved = await service.sessions.read(terminal.id);
+      assert.equal(saved.exitCode, 0);
+      assert.match(saved.screen, /SAVED_CONCURRENT/);
+    }
+    await service.sessions.persist();
+  } finally { await service.close(); }
+});
+
 test('websocket rejects report origins and unauthenticated terminal input', async () => {
   const { service } = await fixture();
   try {

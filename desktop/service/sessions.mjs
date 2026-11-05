@@ -208,7 +208,7 @@ export class Sessions extends EventEmitter {
       session.process = null;
       session.deviceReplies?.dispose();
       if (process.platform === 'win32') {
-        // node-pty 1.1.0 leaves its ConPTY output worker alive after a natural exit.
+        // The pinned node-pty leaves its ConPTY output worker alive after a natural exit.
         // The bundled ConPTY DLL avoids the legacy AttachConsole-on-dead-PID path.
         try { proc.kill(); } catch { /* Native console already closed. */ }
         proc._agent?._conoutSocketWorker?.dispose();

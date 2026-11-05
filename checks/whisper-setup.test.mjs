@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, realpath } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { configureWhisper, localWhisperSettings } from '../desktop/service/local-whisper-settings.mjs';
@@ -18,12 +18,13 @@ test('Whisper setup checks a model.bin and preserves unrelated secrets and setti
   const value = await fixture();
   await writeFile(path.join(value.repo, '.env'), '# keep this\nOTHER_KEY="private fixture"\nMRMAK_WHISPER_DEVICE=auto\n');
   const result = await configureWhisper(value.repo, { ...value, model: path.join(value.model, 'model.bin') }, { runner });
-  assert.equal(result.model, value.model); assert.equal(result.result.device, 'cpu');
+  // macOS /var and Windows 8.3 temporary paths can name the same folder.
+  assert.equal(result.model, await realpath(value.model)); assert.equal(result.result.device, 'cpu');
   const env = await readFile(path.join(value.repo, '.env'), 'utf8');
   assert.ok(env.startsWith('# keep this\nOTHER_KEY="private fixture"\n'));
   assert.equal(env.match(/MRMAK_WHISPER_DEVICE=/g).length, 1);
   const settings = await localWhisperSettings(value.repo);
-  assert.equal(settings.python.replaceAll('\\', '/'), value.python.replaceAll('\\', '/'));
+  assert.equal(settings.python.replaceAll('\\', '/'), (await realpath(value.python)).replaceAll('\\', '/'));
   assert.equal(settings.device, 'cpu'); assert.equal(settings.available, true);
   assert.equal((await readdir(value.repo)).filter(name => name.startsWith('.env.whisper-')).length, 0);
 });

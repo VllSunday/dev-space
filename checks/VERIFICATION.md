@@ -1,5 +1,34 @@
 # Verification record
 
+## Version 1.0.6 — release repair
+
+The first v1.0.5 release run (42104824539) stopped at npm test. macOS failed
+because /var temporary paths resolve through /private/var; Windows failed
+because its short RUNNER~1 path resolves to runneradmin. The Whisper test now
+compares real paths for both the model and Python, retaining the production
+validation. Its three focused tests pass locally.
+
+The Windows service-test process also terminated with STATUS_HEAP_CORRUPTION
+after its assertions passed. This is consistent with the unsynchronized global
+ConPTY vector in node-pty 1.1.0; upstream issue #921 and fix #922 describe that
+race. Pin 1.2.0-beta.14, whose native source guards the vector with a mutex.
+See https://github.com/microsoft/node-pty/issues/921 and
+https://github.com/microsoft/node-pty/blob/v1.2.0-beta.14/src/win/conpty.cc.
+A real-PTY regression now exits six shells together and checks each one's
+output and exit status. The complete native suite remains a CI requirement;
+the new dependency is not cached locally and cannot be installed in this
+restricted session. Local PTY/child-process failures are not CI results.
+
+The focused Whisper/template/release-command run passed five tests, skipped
+one restricted child-process test, and failed none. The broader focused suite
+(checks/*.test.mjs, devspace, dictation-settings and tab-appearance) then passed
+40 tests with one restricted child-process skip and no failures. TypeScript and
+the Vite production build passed with 403 modules. This used the existing local
+dependency installation; it does not validate the new native node-pty binary.
+No product data, account,
+provider, permissions or running agent was changed. This is a new release
+commit; the published v1.0.5 tag is preserved.
+
 ## Version 1.0.5
 
 The optional bundled game template is included under desktop/service/templates,
