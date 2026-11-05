@@ -1,11 +1,13 @@
 // Uses stopped fixture sessions: never launches a CLI or touches user projects.
-import { mkdtemp, mkdir, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, realpath } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { expect } from '@playwright/test';
 import { createService } from '../desktop/service/server.mjs';
 import { desktopAuth, launchBrowser } from '../desktop/service/test/browser.mjs';
-const repo = await mkdtemp(path.join(os.tmpdir(), 'devspace-workbench-ui-'));
+// The service canonicalizes its repository; stopped fixtures must use the same
+// spelling (Windows RUNNER~1 and macOS /var can otherwise hide every test tab).
+const repo = await realpath(await mkdtemp(path.join(os.tmpdir(), 'devspace-workbench-ui-')));
 await mkdir(path.join(repo, 'workspace'));
 const service = await createService({ repo, uiDir: path.resolve('dist'), mcpOptions: { home: repo, env: {} } });
 for (const id of ['a', 'b', 'c', 'd']) service.sessions.items.set(id, service.sessions.make({ id, agent: 'shell', cwd: repo, name: 'Fixture ' + id, status: 'stopped', open: true, createdAt: new Date().toISOString(), cols: 80, rows: 24 }));
@@ -19,6 +21,7 @@ try {
   await expect.poll(()=>page.locator('.ds-titlebar>img').evaluate(image=>image.naturalWidth)).toBeGreaterThan(0);
   await page.keyboard.press('Control+j');
   await expect(page.locator('.agent-cell')).toHaveCount(1);
+  await expect(page.locator('.chat-tab')).toHaveCount(4);
   await page.getByRole('button', { name: 'Агенты на всю рабочую область', exact: true }).click();
   await page.keyboard.press('Control+Shift+o'); await expect(page.locator('.agent-cell')).toHaveCount(2);
   await page.keyboard.press('Control+Shift+e'); await expect(page.locator('.agent-cell')).toHaveCount(3);

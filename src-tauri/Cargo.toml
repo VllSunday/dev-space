@@ -1,6 +1,6 @@
 [package]
 name = "dev-space"
-version = "1.0.6"
+version = "1.0.7"
 description = "Dev Space: projects, materials and agent terminals"
 authors = ["Dev Space contributors"]
 edition = "2021"

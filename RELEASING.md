@@ -15,7 +15,7 @@ node scripts/publish-github.mjs
 Без этого флага сценарий не меняет текущую видимость репозитория.
 
 Если исходники и тег уже отправлены, продолжить проверку сборок можно командой
-`node scripts/publish-github.mjs --resume --tag v1.0.6`. Этот режим проверяет
+`node scripts/publish-github.mjs --resume --tag v1.0.7`. Этот режим проверяет
 исходный коммит тега и не отправляет новые изменения. Состояние записывается в
 `release/publication-progress.json`, ошибки заданий — в
 `release/publication-failed-jobs.log`.

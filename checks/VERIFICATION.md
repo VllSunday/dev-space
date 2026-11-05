@@ -1,5 +1,24 @@
 # Verification record
 
+## Version 1.0.7 — Windows CI fixture
+
+The v1.0.6 native test suites passed on all four runners. Linux and macOS arm64
+packages completed; macOS x64 was still building when investigated. Windows
+failed only workbench-ui.mjs: its directly constructed stopped sessions used
+the short os.tmpdir path while createService canonicalized the project path.
+As a result the project's fixture panes contained no tabs. Resolve the fixture
+root with realpath before creating sessions, and wait for four actual tabs
+before testing splits. Keep every drag, close, font and resize assertion.
+
+Local installation of 1.0.6 completed through the user-run helper: all five
+browser fixtures passed, runtime and executable hashes were verified, and
+the desktop shortcut was created. That installed app is usable and is not
+replaced during this CI repair. Logs: release/finish-1.0.6.log and
+release/interface-check-result.json. The repaired fixture passes syntax
+validation; the focused split/font and Whisper suite passed all 11 tests.
+The corrected fixture still requires execution on the Windows CI runner.
+Published v1.0.6 remains unchanged; this source prepares v1.0.7.
+
 ## Version 1.0.6 — release repair
 
 The first v1.0.5 release run (42104824539) stopped at npm test. macOS failed
