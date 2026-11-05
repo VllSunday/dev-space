@@ -1,6 +1,6 @@
 // Run from the user's normal terminal, where GitHub networking is available.
 // Uses the existing GitHub CLI login; never reads or prints its credentials.
-import { spawnSync } from 'node:child_process';
+import { runReleaseCommand } from './release-command.mjs';
 import { readFileSync, existsSync, mkdirSync, createReadStream, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
@@ -12,56 +12,67 @@ const owner = 'VllSunday', repository = `${owner}/dev-space`;
 const cleanupFile = path.join(root, 'release', 'migration-cleanup.json');
 const cleanup = existsSync(cleanupFile) ? JSON.parse(readFileSync(cleanupFile, 'utf8')) : null;
 if (cleanup && (!new RegExp(`^${owner}/[A-Za-z0-9_.-]+$`).test(cleanup.repository) || cleanup.repository === repository || !Number.isSafeInteger(cleanup.repositoryId) || cleanup.removeAfterVerifiedRelease !== true)) throw Error('Invalid migration cleanup instructions');
-const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+const resume = process.argv.includes('--resume');
+const tagOption = process.argv.indexOf('--tag');
+const requestedTag = tagOption < 0 ? null : process.argv[tagOption + 1];
+if (tagOption >= 0 && (!resume || !/^v\d+\.\d+\.\d+$/.test(requestedTag || ''))) throw Error('--tag vMAJOR.MINOR.PATCH requires --resume');
+const version = requestedTag?.slice(1) || JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 if (!/^\d+\.\d+\.\d+$/.test(version)) throw Error('Invalid release version');
 const tag = `v${version}`;
 const gh = process.platform === 'win32' && existsSync('C:/Program Files/GitHub CLI/gh.exe') ? 'C:/Program Files/GitHub CLI/gh.exe' : 'gh';
 function command(program, args, { input, allowFailure = false, live = false } = {}) {
-  const result = spawnSync(program, args, { cwd: root, encoding: 'utf8', input, windowsHide: true, stdio: live ? 'inherit' : ['pipe', 'pipe', 'pipe'] });
-  if (!allowFailure && (result.error || result.status !== 0)) throw Error(result.error?.message || result.stderr?.trim() || `${program} failed (${result.status})`);
-  return result;
+  return runReleaseCommand(program, args, { cwd: root, input, allowFailure, live });
 }
 const git = (...args) => command('git', args).stdout.trim();
 const api = (endpoint, options = {}) => {
-  const result = command(gh, ['api', endpoint, ...(options.method ? ['--method', options.method] : []), ...(options.body ? ['--input', '-'] : [])], { input: options.body ? JSON.stringify(options.body) : undefined, allowFailure: options.allowFailure });
+  const result = command(gh, ['api', endpoint, ...(options.method ? ['--method', options.method] : []), ...(options.body ? ['--input', '-'] : []), ...(options.pick ? ['--jq', options.pick] : [])], { input: options.body ? JSON.stringify(options.body) : undefined, allowFailure: options.allowFailure });
   if (result.status !== 0) { if (options.allowFailure && (/HTTP 404|Not Found/.test(result.stderr || '') || options.allowEmpty && /Git Repository is empty|HTTP 409/.test(result.stderr || ''))) return null; throw Error(result.stderr?.trim() || 'GitHub request failed'); }
   return result.stdout.trim() ? JSON.parse(result.stdout) : null;
 };
-const head = git('rev-parse', 'HEAD');
-if (git('status', '--porcelain')) throw Error('Commit or review source changes before publishing. Local user data and release files stay ignored.');
-const roots = git('rev-list', '--max-parents=0', 'HEAD').split('\n');
+const localTag = command('git', ['rev-parse', '--verify', `refs/tags/${tag}`], { allowFailure: true });
+if (resume && localTag.status !== 0) throw Error(`Cannot resume: local ${tag} is missing`);
+const head = resume ? git('rev-parse', `${tag}^{commit}`) : git('rev-parse', 'HEAD');
+if (!resume && git('status', '--porcelain')) throw Error('Commit or review source changes before publishing. Local user data and release files stay ignored.');
+if (resume && JSON.parse(git('show', `${tag}:package.json`)).version !== version) throw Error('Release tag and source version do not match');
+const roots = git('rev-list', '--max-parents=0', head).split('\n');
 if (roots.length !== 1) throw Error('Expected an independent Git history');
-const files = git('ls-tree', '-r', '--name-only', 'HEAD').split('\n');
+const files = git('ls-tree', '-r', '--name-only', head).split('\n');
 for (const file of files) if (/^(?:\.env(?:\.|$)|\.devspace\/|\.mrmak\/|\.cache\/|release\/|workspace\/devspace\/)|(?:^|\/)(?:auth|credentials|tokens?)\.json$/.test(file)) throw Error(`Private local file in commit: ${file}`);
 for (const file of ['.github/workflows/release-build.yml', 'LICENSE', 'src/devspace/DevSpace.tsx']) if (!files.includes(file)) throw Error(`Required source file missing: ${file}`);
 if (process.argv.includes('--check')) { console.log(`Publication preflight passed: ${repository}, ${tag}, ${head}, ${files.length} source files.`); process.exit(0); }
 
-console.log(`Publishing ${repository} ${tag}. No proxy or security settings are changed.`);
-const profile = api('user');
+console.log(`${resume ? 'Resuming' : 'Publishing'} ${repository} ${tag}. No proxy or security settings are changed.`);
+const progress = value => { mkdirSync(path.join(root, 'release'), { recursive: true }); writeFileSync(path.join(root, 'release/publication-progress.json'), JSON.stringify({ repository, tag, commit: head, updatedAt: new Date().toISOString(), ...value }, null, 2)); };
+const profile = api('user', { pick: '{login}' });
 if (profile.login.toLowerCase() !== owner.toLowerCase()) throw Error(`GitHub CLI must be signed in as ${owner}; current account: ${profile.login}`);
-let remote = api(`repos/${repository}`, { allowFailure: true });
-if (!remote) remote = api('user/repos', { method: 'POST', body: { name: 'dev-space', description: 'Local projects, materials and agent terminals', private: true, auto_init: false } });
+let remote = api(`repos/${repository}`, { allowFailure: true, pick: '{id, fork, owner: {login: .owner.login}}' });
+if (!remote && resume) throw Error('Cannot resume: published repository is not accessible');
+if (!remote) remote = api('user/repos', { method: 'POST', body: { name: 'dev-space', description: 'Local projects, materials and agent terminals', private: true, auto_init: false }, pick: '{id, fork, owner: {login: .owner.login}}' });
 if (remote.fork || remote.owner?.login.toLowerCase() !== owner.toLowerCase()) throw Error('The target must be an independent repository owned by the expected account');
+if (!resume) {
 const origin = command('git', ['remote', 'get-url', 'origin'], { allowFailure: true });
 const url = `https://github.com/${repository}.git`;
 if (origin.status !== 0) git('remote', 'add', 'origin', url);
 else if (origin.stdout.trim() !== url) throw Error('Origin points to another repository; it was not changed');
 // Per-command credential helper: no global Git configuration or token copies.
 const credentialArgs = ['-c', 'credential.helper=', '-c', `credential.helper=!"${gh}" auth git-credential`];
-const branch = api(`repos/${repository}/commits/main`, { allowFailure: true, allowEmpty: true });
+const branch = api(`repos/${repository}/commits/main`, { allowFailure: true, allowEmpty: true, pick: '{sha}' });
 if (branch && branch.sha !== head) {
   command('git', [...credentialArgs, 'fetch', '--no-tags', 'origin', 'main']);
   const ancestor = command('git', ['merge-base', '--is-ancestor', branch.sha, head], { allowFailure: true });
   if (ancestor.status !== 0) throw Error('Remote main has additional changes. Review and merge them before publishing. No force push was attempted.');
 }
-const localTag = command('git', ['rev-parse', '--verify', `refs/tags/${tag}`], { allowFailure: true });
 if (localTag.status === 0 && localTag.stdout.trim() !== head) throw Error('Local release tag points to a different commit');
 if (localTag.status !== 0) git('tag', tag, head);
 command('git', [...credentialArgs, 'push', '--atomic', '--set-upstream', 'origin', 'main', `refs/tags/${tag}`], { live: true });
-const published = api(`repos/${repository}/commits/main`);
+const published = api(`repos/${repository}/commits/main`, { pick: '{sha}' });
 if (published.sha !== head) throw Error('Uploaded source verification failed');
-const rootCommit = api(`repos/${repository}/commits/${roots[0]}`);
+}
+const publishedTag = api(`repos/${repository}/commits/${tag}`, { pick: '{sha}' });
+if (publishedTag.sha !== head) throw Error('Published release tag points to a different source commit');
+const rootCommit = api(`repos/${repository}/git/commits/${roots[0]}`, { pick: '{sha,parents}' });
 if (rootCommit.parents.length !== 0) throw Error('New repository contains unexpected parent history');
+progress({stage:'source-verified'});
 
 console.log(`Source verified. Waiting for Windows, Linux and macOS builds: https://github.com/${repository}/actions`);
 let run;
@@ -71,10 +82,17 @@ for (let attempt = 0; attempt < 36; attempt++) {
   if (run) break;
   await new Promise(resolve => setTimeout(resolve, 5000));
 }
-if (!run) throw Error('Source is uploaded, but the release workflow did not start. Check repository Actions settings. The old fork is retained.');
-if (run.conclusion !== 'success') command(gh, ['run', 'watch', String(run.databaseId), '--repo', repository, '--interval', '15', '--exit-status'], { live: true });
+if (!run) { progress({stage:'workflow-not-found'}); throw Error('Source is uploaded, but the release workflow did not start. Check repository Actions settings.'); }
+progress({stage:'building',runId:run.databaseId,runUrl:`https://github.com/${repository}/actions/runs/${run.databaseId}`});
+const watched = run.conclusion === 'success' ? {status:0} : command(gh, ['run', 'watch', String(run.databaseId), '--repo', repository, '--interval', '15', '--exit-status'], { live: true, allowFailure: true });
+if (watched.status !== 0) {
+  const failed = command(gh, ['run','view',String(run.databaseId),'--repo',repository,'--log-failed'], {allowFailure:true});
+  writeFileSync(path.join(root,'release/publication-failed-jobs.log'), failed.stdout || failed.stderr || 'No job logs returned');
+  progress({stage:'build-failed',runId:run.databaseId,runUrl:`https://github.com/${repository}/actions/runs/${run.databaseId}`,logs:'release/publication-failed-jobs.log'});
+  throw Error('Release build failed. Logs saved to release/publication-failed-jobs.log; the published tag was preserved.');
+}
 
-const release = api(`repos/${repository}/releases/tags/${tag}`);
+const release = api(`repos/${repository}/releases/tags/${tag}`, { pick: '{html_url,assets:[.assets[]|{name,size}]}' });
 const expected = [
   `Dev-Space-${tag}-windows-x64-setup.exe`, `Dev-Space-${tag}-windows-x64.exe`, `Dev-Space-${tag}-windows-x64-portable.zip`,
   `Dev-Space-${tag}-linux-x86_64`, `Dev-Space-${tag}-x86_64.AppImage`, `Dev-Space-${tag}-linux-x86_64-portable.tar.gz`,
@@ -95,11 +113,12 @@ for (const name of expected.filter(name => name !== 'SHA256SUMS.txt')) {
   if (hash.digest('hex') !== checksums.get(name)) throw Error(`Downloaded asset checksum mismatch: ${name}. The old fork is retained.`);
 }
 writeFileSync(path.join(root, 'release', 'publication-result.json'), JSON.stringify({ repository, tag, commit: head, release: release.html_url, assets: expected, verifiedAt: new Date().toISOString() }, null, 2));
+progress({stage:'verified',runId:run.databaseId,release:release.html_url,assets:expected});
 console.log(`Release and all ${expected.length - 1} packages verified: ${release.html_url}`);
 
 // Cleanup is opt-in through a separately prepared private migration file.
 if (cleanup) {
-  const old = api(`repos/${cleanup.repository}`, { allowFailure: true });
+  const old = api(`repos/${cleanup.repository}`, { allowFailure: true, pick: '{id,fork,owner:{login:.owner.login}}' });
   if (old) {
     if (old.id !== cleanup.repositoryId || !old.fork || old.owner?.login.toLowerCase() !== owner.toLowerCase()) throw Error('Migration source identity does not match; deletion refused');
     api(`repos/${cleanup.repository}`, { method: 'DELETE' });
@@ -108,3 +127,4 @@ if (cleanup) {
   }
 }
 console.log('Publication complete.');
+progress({stage:'complete',runId:run.databaseId,release:release.html_url,assets:expected});
