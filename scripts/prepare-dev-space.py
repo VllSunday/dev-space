@@ -27,6 +27,10 @@ if ui.exists():
  shutil.rmtree(ui)
 shutil.copytree(root/'dist',runtime/'ui')
 shutil.copytree(root/'public/assets',runtime/'ui/assets',dirs_exist_ok=True)
+for name in ['brand-star-source.jpg','brand-chats.svg','brand-workspace.svg','mak-nose.svg','mak-nose-chats.svg']:
+ obsolete=(ui/'assets'/name).resolve()
+ assert obsolete.is_relative_to(ui.resolve())
+ if obsolete.is_file():obsolete.unlink()
 (runtime/'README.txt').write_text('Dev Space runtime. Contains Node, terminal dependencies and UI. No user credentials or conversations.\n')
 for name in ['LICENSE','THIRD_PARTY_NOTICES.md']:shutil.copy2(root/name,runtime/name)
 for candidate in [Path(node).parent/'LICENSE',Path(node).parent.parent/'LICENSE']:

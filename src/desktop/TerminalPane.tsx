@@ -13,9 +13,11 @@ import { fileManager, isMac, modKey, modLabel } from './platform'
 import { deferredClipboardWrite, terminalClipboardGate, terminalCopyWindow, type PendingCopy } from './terminalClipboard'
 import { dictationInput, dictationPasteEvent, type DictationPasteRequest } from './terminalDictation'
 
-export default function TerminalPane({ id, agent, fontSize, appearance, optionMeta, onAttachmentStatus }: { id: string; agent: AgentId; fontSize: number; appearance: TerminalAppearance; optionMeta: boolean; onAttachmentStatus: (id: string, text: string) => void }) {
+export default function TerminalPane({ id, agent, fontSize, appearance, optionMeta, onAttachmentStatus, focused = true, fontFamily }: { id: string; agent: AgentId; fontSize: number; appearance: TerminalAppearance; optionMeta: boolean; focused?: boolean; fontFamily?: string; onAttachmentStatus: (id: string, text: string) => void }) {
   useLocale()
   const { resolved } = useWorkspaceTheme('chat')
+  const focusedRef = useRef(focused); focusedRef.current = focused
+  const focusTerminal = useRef<() => void>(() => {})
   const host = useRef<HTMLDivElement>(null)
   const area = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
@@ -63,7 +65,9 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       setDragging(detail.phase !== 'drop' && inside)
       if (detail.phase === 'drop' && inside) void attachPathsRef.current(detail.paths || [])
     }
-    const pick = async () => {
+    const pick = async (event: Event) => {
+      const targetId = (event as CustomEvent<{id?: string}>).detail?.id
+      if (targetId ? targetId !== id : !focusedRef.current) return
       if (choosing.current) return
       choosing.current = true
       // Keep the initiating chat, even if another tab is selected during the picker.
@@ -86,10 +90,12 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
     }
     // Automatic focus leaves a text field the person is typing in elsewhere, such as a tab rename.
     const focusIdle = () => {
+      if (!focusedRef.current) return
       const active = document.activeElement as HTMLElement | null
       if (active && !host.current?.contains(active) && (active.matches('input, textarea, select') || active.isContentEditable)) return
       terminal.focus()
     }
+    focusTerminal.current = focusIdle
     const terminal = new Terminal({
       fontFamily: '"Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace', fontSize: 13, lineHeight: 1.18,
       cursorBlink: true, cursorStyle: 'bar', scrollback: 3000, allowTransparency: false, allowProposedApi: true,
@@ -202,7 +208,7 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       // Leave paste to the DOM clipboard event; do not send Ctrl+V (Cmd+V on macOS) to the CLI.
       if (modKey(event) && (event.code === 'KeyV' || event.key.toLowerCase() === 'v')) return false
       // App shortcuts belong to Chats, not the terminal.
-      if ((event.ctrlKey && event.code === 'Tab') || (modKey(event) && event.shiftKey && ['KeyP', 'KeyT', 'KeyH', 'KeyW'].includes(event.code)) || ((isMac ? event.metaKey : event.altKey) && /^Digit[1-9]$/.test(event.code))) return false
+      if ((event.ctrlKey && event.code === 'Tab') || (modKey(event) && event.shiftKey && ['KeyP', 'KeyT', 'KeyH', 'KeyW', 'KeyO', 'KeyE', 'KeyX', 'KeyZ'].includes(event.code)) || ((isMac ? event.metaKey : event.altKey) && /^Digit[1-9]$/.test(event.code))) return false
       return true
     })
     // Agent TUIs can enable mouse reporting even in the normal buffer. Keep
@@ -231,6 +237,7 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
     window.addEventListener('focus', focus)
     return () => {
       window.removeEventListener(dictationPasteEvent, dictate)
+      sendEvent({ type: 'unsubscribe', id }); focusTerminal.current = () => {}
       off(); input.dispose(); clipboard.dispose(); dropCopy(); observer.disconnect()
       element.removeEventListener('pointerdown', selectionStart, true); element.removeEventListener('pointerup', selectionEnd, true); element.removeEventListener('keydown', copyGesture, true)
       element.removeEventListener('click', multipleClick, true)
@@ -239,6 +246,11 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       onAttachmentStatus(id, ''); terminal.dispose(); terminalRef.current = null; fitRef.current = null
     }
   }, [id, agent, onAttachmentStatus])
+  useEffect(() => { if (focused) focusTerminal.current() }, [focused])
+  useEffect(() => {
+    const apply = () => { const terminal = terminalRef.current; if (!terminal || !fontFamily) return; terminal.options.fontFamily = fontFamily; if (host.current?.clientWidth && host.current?.clientHeight) { fitRef.current?.fit(); sendEvent({ type: 'resize', id, cols: terminal.cols, rows: terminal.rows }) } }
+    apply(); window.addEventListener('devspace-fonts-ready', apply); return () => window.removeEventListener('devspace-fonts-ready', apply)
+  }, [fontFamily, id])
   useEffect(() => {
     const terminal = terminalRef.current
     if (!terminal) return

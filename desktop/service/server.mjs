@@ -35,12 +35,16 @@ import { LocalReadAloud } from './local-read-aloud.mjs';
 import { Handoffs } from './handoff.mjs';
 import { chatCommands } from './chat-commands.mjs';
 import { isThemePreference } from './appearance.mjs';
+import { validateLayout } from './pane-layout.mjs';
+import { CustomFonts, defaultDisplay, displaySettings } from './custom-fonts.mjs';
+import { configureWhisper, localWhisperSettings } from './local-whisper-settings.mjs';
 
 const listen = server => new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)); });
 
-export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions }) {
+export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, localWhisperCheck }) {
   repo = await realpath(repo);
   stateDir ||= path.join(repo, '.devspace');
+  const fonts = new CustomFonts(stateDir);
   const dictation = mobileOptions?.dictation || new MobileDictation(repo);
   const files = new Files(repo);
   const attachments = new Attachments(repo);
@@ -60,6 +64,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const savedSettings = await readJson(settingsPath, null);
   let settings = { language: 'ru', defaultAgent: 'codex', defaultBypass: false, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, groupTabsByProject: false, systemEvents: 'compact', ...savedSettings };
   if (!['ru', 'en'].includes(settings.language)) settings.language = 'ru';
+  try { settings.display = displaySettings(settings.display || defaultDisplay); } catch { settings.display = { ...defaultDisplay }; }
   native({ type: 'language', language: settings.language });
   if (await dictation.initializeProvider?.(settings, savedSettings !== null)) await saveJson(settingsPath, settings);
   dictation.providerChoice = () => settings.transcribeProvider || null;
@@ -83,6 +88,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   let transcriptSave = Promise.resolve();
   let voiceOwner = null;
   let closing = false;
+  let whisperSetupBusy = false;
   const clients = new Set();
   let mobile;
   const notices = [];
@@ -179,7 +185,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   sessions.on('service-error', error => broadcast('service-error', { error: publicError(error) }));
   sessions.on('output', output => {
     for (const ws of clients) {
-      if (ws.sessionId !== output.id) continue;
+      if (!ws.subscriptions.has(output.id)) continue;
       if (ws.bufferedAmount > 2 * 1024 * 1024) { ws.close(1013, 'Reconnect to restore the terminal screen'); continue; }
       send(ws, 'output', output);
     }
@@ -211,6 +217,16 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       if (url.pathname.startsWith('/api/')) {
         authorize(request);
         const method = request.method;
+        if (method === 'POST' && url.pathname === '/api/appearance/fonts') {
+          const font = await fonts.upload(request, decodeURIComponent(request.headers['x-file-name'] || 'font'));
+          broadcast('appearance-fonts', {}); return json(response, 201, font);
+        }
+        if (method === 'GET' && url.pathname === '/api/appearance/fonts') return json(response, 200, await fonts.list());
+        const fontRoute = /^\/api\/appearance\/fonts\/([a-f\d-]{36})$/.exec(url.pathname);
+        if (method === 'GET' && fontRoute) {
+          const bytes = await fonts.bytes(fontRoute[1]);
+          response.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': bytes.length, 'Cache-Control': 'no-store' }); response.end(bytes); return;
+        }
         if (method === 'POST' && url.pathname === '/api/devspace/files') return json(response, 201, await devspace.upload(request, decodeURIComponent(request.headers['x-file-name'] || 'file')));
         if (method === 'GET' && url.pathname === '/api/devspace/drafts') return json(response, 200, await devspace.readDraft(url.searchParams.get('key')||''));
         if (method === 'GET' && url.pathname === '/api/devspace') return json(response, 200, await devspace.read());
@@ -230,11 +246,34 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           return json(response, 201, await attachments.save(Buffer.concat(chunks), decodeURIComponent(request.headers['x-file-name'] || 'Screenshot')));
         }
         if (method === 'GET' && url.pathname === '/api/dictation') return json(response, 200, await dictation.status());
+        if (method === 'GET' && url.pathname === '/api/dictation/local') return json(response, 200, await localWhisperSettings(repo));
         if (method === 'POST' && url.pathname === '/api/transcribe') return json(response, 200, await dictation.transcribe(request, 'desktop', () => !closing));
         const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname.startsWith('/api/devspace') ? 4 * 1024 * 1024 : url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/cards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
+        if (method === 'DELETE' && fontRoute) {
+          const removed = await fonts.remove(fontRoute[1]);
+          for (const key of ['interfaceFont', 'terminalFont']) if (settings.display[key] === removed.family) settings.display[key] = defaultDisplay[key];
+          await saveSettings(); broadcast('settings', { settings }); broadcast('appearance-fonts', {}); return json(response, 200, await fonts.list());
+        }
+        if (method === 'POST' && url.pathname === '/api/agent-layout') {
+          if (!(await devspace.read()).projects.some(project => project.id === data.projectId)) throw Object.assign(Error('Проект не найден.'), { status: 400 });
+          let layout; try { layout = validateLayout(data.layout); } catch (error) { throw Object.assign(error, { status: 400 }); }
+          settings.agentLayouts = { ...(settings.agentLayouts || {}), [data.projectId]: layout };
+          await saveSettings(); return json(response, 200, layout);
+        }
         if (method === 'PUT' && url.pathname === '/api/devspace/drafts') return json(response, 200, await devspace.saveDraft(data));
         if (method === 'POST' && url.pathname === '/api/devspace') return json(response, 200, await devspace.mutate(data));
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
+        if (method === 'POST' && url.pathname === '/api/dictation/local') {
+          if (whisperSetupBusy || dictation.controllers?.size) throw Object.assign(Error('Дождитесь завершения текущей проверки или распознавания.'), { status: 429 });
+          whisperSetupBusy = true;
+          const controller = new AbortController(), cancel = () => controller.abort(), providerBefore = settings.transcribeProvider;
+          response.once('close', cancel);
+          try {
+            const result = await configureWhisper(repo, data, { runner: localWhisperCheck, signal: controller.signal });
+            if (settings.transcribeProvider === providerBefore) await chooseDictation('local');
+            return json(response, 200, result);
+          } finally { whisperSetupBusy = false; response.off('close', cancel); }
+        }
         if (method === 'GET' && url.pathname === '/api/mobile') return json(response, 200, mobile.status());
         if (method === 'GET' && url.pathname === '/api/mobile/check') return json(response, 200, await mobile.transport.probe());
         if (method === 'POST' && url.pathname === '/api/mobile/enable') return json(response, 200, await mobile.enable());
@@ -320,7 +359,8 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           return json(response, 200, preview);
         }
         if (method === 'POST' && url.pathname === '/api/settings') {
-          if (data.spaceLayout && typeof data.spaceLayout === 'object') { const value=data.spaceLayout; settings.spaceLayout={projectId: String(value.projectId||'').slice(0,100),topicId:String(value.topicId||'all').slice(0,100),collapsed:!!value.collapsed,agentOpen:!!value.agentOpen,agentWidth:Math.max(320,Math.min(1400,Number(value.agentWidth)||500))}; }
+          if (data.display !== undefined) settings.display = displaySettings(data.display, settings.display);
+          if (data.spaceLayout && typeof data.spaceLayout === 'object') { const value=data.spaceLayout; settings.spaceLayout={projectId: String(value.projectId||'').slice(0,100),topicId:String(value.topicId||'all').slice(0,100),collapsed:!!value.collapsed,agentOpen:!!value.agentOpen,agentWidth:Math.max(320,Math.min(1400,Number(value.agentWidth)||500)),agentWide:!!value.agentWide}; }
           if (inventory().some(item => item.id === data.defaultAgent)) settings.defaultAgent = data.defaultAgent;
           if (typeof data.defaultBypass === 'boolean') settings.defaultBypass = data.defaultBypass;
           if (Number.isInteger(data.terminalFontSize) && data.terminalFontSize >= 10 && data.terminalFontSize <= 24) settings.terminalFontSize = data.terminalFontSize;
@@ -409,8 +449,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (method === 'DELETE' && !action) return json(response, 200, await closeChat(id));
         }
         if (method === 'POST' && url.pathname === '/api/window') {
-          if (!['chats', 'workspace'].includes(data.window) || !['show', 'hide', 'minimize', 'pin'].includes(data.action)) throw new Error('Unknown window action');
-          native({ type: 'window', action: data.action, window: data.window, value: !!data.value }); return json(response, 200, { requested: true });
+          if (!['chats', 'workspace'].includes(data.window) || !['show', 'hide', 'minimize', 'pin', 'zoom'].includes(data.action)) throw new Error('Unknown window action');
+          if (data.action === 'zoom' && (!Number.isFinite(data.value) || data.value < .75 || data.value > 1.75)) throw Object.assign(Error('Недопустимый масштаб.'), { status: 400 });
+          native({ type: 'window', action: data.action, window: data.window, value: data.action === 'zoom' ? data.value : !!data.value }); return json(response, 200, { requested: true });
         }
         if (method === 'POST' && url.pathname === '/api/reveal') {
           const file = await realpath(path.resolve(data.path));
@@ -457,7 +498,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       if (!info.isFile()) throw new Error('File not found');
       await serveFile(request, response, file, info, {
         'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY',
-        'Content-Security-Policy': `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: ${files.origin}; media-src 'self' blob: ${files.origin}; connect-src 'self' ws://127.0.0.1:* ${files.origin}; frame-src http://127.0.0.1:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`,
+        'Content-Security-Policy': `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: ${files.origin}; media-src 'self' blob: ${files.origin}; connect-src 'self' ws://127.0.0.1:* ${files.origin}; frame-src http://127.0.0.1:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`,
       });
     } catch (error) { if (!response.headersSent) json(response, error.status || 400, { error: publicError(error) }); }
   });
@@ -471,7 +512,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     wss.handleUpgrade(request, socket, head, ws => wss.emit('connection', ws));
   });
   wss.on('connection', ws => {
-    ws.authenticated = false; ws.sessionId = null;
+    ws.authenticated = false; ws.subscriptions = new Map(); ws.subscriptionVersion = 0;
     const authTimer = setTimeout(() => ws.close(1008, 'Authentication required'), 5000);
     ws.on('message', async raw => {
       try {
@@ -482,13 +523,16 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           send(ws, 'connected', { sessions: sessions.list(), selectedId, coordinator: coordinator.state }); return;
         }
         if (message.type === 'subscribe') {
-          ws.sessionId = message.id;
+          sessions.get(message.id);
+          if (!ws.subscriptions.has(message.id) && ws.subscriptions.size >= 4) throw Error('Можно наблюдать до четырёх терминалов.');
+          const version = ++ws.subscriptionVersion; ws.subscriptions.set(message.id, version);
           const snapshot = await sessions.snapshot(message.id);
-          if (ws.sessionId === message.id) send(ws, 'snapshot', snapshot);
-        } else if (message.type === 'input') sessions.input(message.id, message.data);
+          if (ws.subscriptions.get(message.id) === version) send(ws, 'snapshot', snapshot);
+        } else if (message.type === 'unsubscribe') ws.subscriptions.delete(message.id);
+        else if (message.type === 'input') sessions.input(message.id, message.data);
         else if (message.type === 'resize') sessions.resize(message.id, message.cols, message.rows);
         else if (message.type === 'selected') { sessions.get(message.id); selectedId = message.id; settings.selectedId = selectedId; scheduleSettings(); }
-        else if (message.type === 'seen' && ws.surface === 'chats' && ws.sessionId === message.id && selectedId === message.id) sessions.seen(message.id, message.completionVersion);
+        else if (message.type === 'seen' && ['chats', 'desktop'].includes(ws.surface) && ws.subscriptions.has(message.id) && selectedId === message.id) sessions.seen(message.id, message.completionVersion);
         else if (message.type === 'workspace-route') { workspaceRoute = String(message.route || '').slice(0, 500); settings.workspaceRoute = workspaceRoute; scheduleSettings(); }
         else if (message.type === 'ping') send(ws, 'pong', {});
       } catch (error) { send(ws, 'service-error', { error: publicError(error) }); }

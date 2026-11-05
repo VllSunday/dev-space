@@ -20,6 +20,17 @@ test('blank project is usable without templates or required classification',asyn
  const state=await op({action:'create-material',projectId:before.projects[0].id,topicId:'unfiled',text:'Мысль\nСвободное описание'});
  assert.equal(state.materials[0].title,'Мысль');assert.equal(state.materials[0].text,'Мысль\nСвободное описание');assert.equal((await store.read()).materials.length,1);
 });
+test('project home and model-page links must stay within their project',async()=>{
+ const {repo,store,op}=await fixture();const projectId=(await store.read()).projects[0].id;
+ let state=await op({action:'create-page',projectId,title:'Models'});const pageId=state.pages[0].id;
+ state=await op({action:'project-home',projectId,pageId});assert.equal(state.projects[0].homePageId,pageId);
+ await assert.rejects(op({action:'project-home',projectId,pageId:'missing'}),e=>e.status===400);
+ state=await op({action:'create-material',projectId,topicId:'unfiled',text:'Model',modelPageId:pageId,files:[]});assert.equal(state.materials[0].modelPageId,pageId);
+ state=await op({action:'create-project',name:'Other project',path:repo});const otherId=state.projects.at(-1).id;
+ await assert.rejects(op({action:'create-material',projectId:otherId,topicId:'unfiled',text:'Model',modelPageId:pageId,files:[]}),e=>e.status===400);
+ await assert.rejects(op({action:'project-home',projectId:otherId,pageId}),e=>e.status===400);
+ state=await op({action:'project-home',projectId,pageId:null});assert.equal(state.projects[0].homePageId,null);
+});
 test('legacy migration preserves IDs and leaves source registry unchanged',async()=>{
  const original={spaces:[{id:'app',name:'Работа',sections:[{id:'ideas',name:'Идеи'}]}],entities:[{id:'original',spaceId:'app',title:'Мои слова',description:'Не переписывать',category:'ideas',created:'2026-11-05'}]};
  const {repo,store}=await fixture(original);assert.deepEqual(JSON.parse(await readFile(path.join(repo,'workspace/workspace.json'),'utf8')),original);

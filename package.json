@@ -1,7 +1,7 @@
 {
   "name": "dev-space",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "postinstall": "npm --prefix desktop/service ci && node scripts/fix-pty-permissions.mjs",
@@ -15,7 +15,7 @@
     "desktop:build": "tauri build",
     "desktop:build:appimage": "NO_STRIP=1 tauri build --bundles appimage",
     "desktop:dev": "tauri dev",
-    "desktop:test": "node --test desktop/service/test/*.test.mjs checks/model.test.mjs",
+    "desktop:test": "node --test desktop/service/test/*.test.mjs checks/*.test.mjs",
     "test:language:ui": "node desktop/service/test/language-ui.mjs",
     "desktop:test:ui": "node desktop/service/test/language-ui.mjs && node desktop/service/test/ui.mjs && node desktop/service/test/links-ui.mjs && node desktop/service/test/scroll-ui.mjs && node desktop/service/test/history-ui.mjs && node desktop/service/test/groups-ui.mjs && node desktop/service/test/conversation-ui.mjs && node desktop/service/test/theme-ui.mjs && node desktop/service/test/voice-ui.mjs && node desktop/service/test/desktop-dictation-ui.mjs && node desktop/service/test/mobile-ui.mjs && node desktop/service/test/workspace-edit-ui.mjs && node desktop/service/test/cards-ui.mjs",
     "test": "npm run desktop:test",
@@ -25,7 +25,9 @@
     "test:assets": "node --test scripts/asset-delivery/test/*.test.mjs",
     "skills:sync": "node scripts/sync-skills.mjs",
     "skills:pack": "node scripts/run-python.mjs scripts/package_skills.py",
-    "test:layout": "node checks/layout-ui.mjs"
+    "test:layout": "node checks/layout-ui.mjs",
+    "prebuild": "node scripts/prepare-model-assets.mjs",
+    "postbuild": "node scripts/prepare-model-assets.mjs --dist"
   },
   "dependencies": {
     "@types/three": "^0.185.4",

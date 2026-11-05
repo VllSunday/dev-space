@@ -1,8 +1,8 @@
 import type { ChatSession } from '../desktop/types'
 export interface SpaceFile { path: string; name: string; size: number; image: boolean }
 export interface Topic { id: string; name: string }
-export interface Project { id: string; name: string; path: string; topics: Topic[] }
-export interface Material { id: string; projectId: string; topicId: string; title: string; text: string; kind: 'note'|'image'|'file'|'link'|'legacy'; files: SpaceFile[]; archived: boolean; created: string; updated: string; legacyId?: string }
+export interface Project { id: string; name: string; path: string; topics: Topic[]; homePageId?: string | null }
+export interface Material { id: string; projectId: string; topicId: string; title: string; text: string; kind: 'note'|'image'|'file'|'link'|'legacy'; files: SpaceFile[]; archived: boolean; created: string; updated: string; legacyId?: string; modelPageId?: string }
 export type BlockType = 'text'|'heading'|'bullet'|'check'|'quote'|'code'|'image'
 export interface Block { id: string; type: BlockType; text: string; checked?: boolean; asset?: string }
 export interface Page { id: string; projectId: string; topicId: string; title: string; blocks: Block[]; sourceIds: string[]; revision: number; layout: 'document'|'wiki'; updated: string }

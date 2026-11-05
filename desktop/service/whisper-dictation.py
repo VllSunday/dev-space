@@ -7,8 +7,12 @@ import sysconfig
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', required=True)
-parser.add_argument('--audio', required=True)
+parser.add_argument('--audio')
+parser.add_argument('--check', action='store_true')
+parser.add_argument('--device', choices=['auto', 'cpu', 'cuda'])
 args = parser.parse_args()
+if not args.check and not args.audio:
+    parser.error('Choose an audio file or --check')
 
 # A model may opt into GPU inference without changing the running desktop service.
 # Models without these local settings retain the portable CPU defaults.
@@ -16,17 +20,12 @@ settings_file = Path(args.model) / 'mrmak-inference.json'
 settings = json.loads(settings_file.read_text(encoding='utf-8')) if settings_file.is_file() else {}
 if not isinstance(settings, dict) or set(settings) - {'device', 'compute_type'}:
     raise ValueError('Invalid local Whisper inference settings')
-device = settings.get('device', 'cpu')
-compute_type = settings.get('compute_type', 'float16' if device == 'cuda' else 'int8')
-if device not in ('cpu', 'cuda') or compute_type not in ('int8', 'float16', 'float32', 'int8_float16'):
-    raise ValueError('Unsupported local Whisper device or precision')
-if device == 'cpu' and compute_type in ('float16', 'int8_float16'):
-    raise ValueError('Float16 inference requires CUDA')
+device = args.device or settings.get('device', 'cpu')
 
 # The existing VoiceInput environment can provide NVIDIA pip wheels. CTranslate2
 # loads their DLLs by name, so expose only this interpreter's library directories.
 dll_handles = []
-if os.name == 'nt' and device == 'cuda':
+if os.name == 'nt' and device in ('auto', 'cuda'):
     nvidia = Path(sysconfig.get_path('purelib')) / 'nvidia'
     directories = [str(folder) for folder in nvidia.glob('*/bin') if folder.is_dir()]
     if directories:
@@ -35,8 +34,28 @@ if os.name == 'nt' and device == 'cuda':
 
 from faster_whisper import WhisperModel
 from faster_whisper.audio import decode_audio
+if device == 'auto':
+    import ctranslate2
+    try:
+        device = 'cuda' if ctranslate2.get_cuda_device_count() > 0 else 'cpu'
+    except RuntimeError:
+        device = 'cpu'
+compute_type = (settings.get('compute_type') if not args.device else None) or ('float16' if device == 'cuda' else 'int8')
+if device not in ('cpu', 'cuda') or compute_type not in ('int8', 'float16', 'float32', 'int8_float16'):
+    raise ValueError('Unsupported local Whisper device or precision')
+if device == 'cpu' and compute_type in ('float16', 'int8_float16'):
+    raise ValueError('Float16 inference requires CUDA')
 
-model = WhisperModel(args.model, device=device, compute_type=compute_type, cpu_threads=4, local_files_only=True)
+try:
+    model = WhisperModel(args.model, device=device, compute_type=compute_type, cpu_threads=4, local_files_only=True)
+except RuntimeError:
+    if args.device != 'auto' or device != 'cuda':
+        raise
+    device, compute_type = 'cpu', 'int8'
+    model = WhisperModel(args.model, device=device, compute_type=compute_type, cpu_threads=4, local_files_only=True)
+if args.check:
+    print(json.dumps({'available': True, 'device': device, 'computeType': compute_type}))
+    raise SystemExit(0)
 audio = decode_audio(args.audio, sampling_rate=16000)
 if len(audio) > 125 * 16000:
     raise ValueError('Recording exceeds two minutes')

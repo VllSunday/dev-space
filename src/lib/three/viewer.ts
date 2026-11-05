@@ -134,14 +134,13 @@ export interface CameraState {
 
 /** Single shared Draco decoder — same reasoning as the arena: two panes decode
  *  at once, and per-instance decoders churn workers and can split versions. */
-const DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/'
+const DRACO_PATH = '/assets/draco/'
 let sharedDraco: DRACOLoader | null = null
 function draco(): DRACOLoader {
   if (!sharedDraco) {
     sharedDraco = new DRACOLoader()
     sharedDraco.setDecoderPath(DRACO_PATH)
     sharedDraco.setWorkerLimit(2)
-    sharedDraco.preload()
   }
   return sharedDraco
 }

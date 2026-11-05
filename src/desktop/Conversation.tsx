@@ -66,8 +66,9 @@ function CopyButton({ text }: { text: string }) {
   return <button type="button" className="conversation-copy" title={t("Copy message")} aria-label={copied ? t("Copied") : t("Copy message")} onClick={() => navigator.clipboard.writeText(text).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1400) }).catch(reportError)}><Icon name="copy" size={14} />{copied && <span>{t("Copied")}</span>}</button>
 }
 
-export default function Conversation({ session, connected, agentLabel, openTerminal, systemEvents = 'compact' }: { session: ChatSession; connected: boolean; agentLabel: string; openTerminal: () => void; systemEvents?: SystemEventsMode }) {
+export default function Conversation({ session, connected, agentLabel, openTerminal, systemEvents = 'compact', focused = true }: { session: ChatSession; connected: boolean; agentLabel: string; openTerminal: () => void; systemEvents?: SystemEventsMode; focused?: boolean }) {
   useLocale()
+  const focusedRef = useRef(focused); focusedRef.current = focused
   const [transcript, setTranscript] = useState<Transcript | null>(null)
   const [readError, setReadError] = useState('')
   const [changedAt, setChangedAt] = useState(() => Date.now()), [now, setNow] = useState(() => Date.now())
@@ -94,7 +95,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
     if (!token) return
     const next = completeCommand(draft.text, token, command)
     setDraft(current => ({ ...current, text: next.text })); setCaret(next.caret); setPicked(0)
-    requestAnimationFrame(() => { input.current?.focus(); input.current?.setSelectionRange(next.caret, next.caret) })
+    requestAnimationFrame(() => { focusedRef.current && input.current?.focus(); input.current?.setSelectionRange(next.caret, next.caret) })
   }
 
   useEffect(() => { saveDraft(session.id, draft) }, [draft, session.id])
@@ -139,7 +140,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
     finally { setAnswering(false); void reload.current() }
   }
   useLayoutEffect(() => { const box = scroller.current; if (box && follow.current) box.scrollTop = box.scrollHeight }, [messages.length, transcript, working])
-  useEffect(() => { input.current?.focus() }, [session.id])
+  useEffect(() => { if (focused) input.current?.focus() }, [session.id, focused])
   useLayoutEffect(() => {
     const box = input.current
     if (!box) return
@@ -149,7 +150,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   function addPaths(paths: string[]) {
     if (!paths.length) return
     setDraft(current => ({ ...current, paths: [...new Set([...current.paths, ...paths])].slice(0, 100) }))
-    input.current?.focus()
+    focusedRef.current && input.current?.focus()
   }
   async function addImages(files: File[]) {
     if (!files.length || uploading) return
@@ -163,7 +164,9 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   useEffect(() => { addPathsRef.current = addPaths })
   useEffect(() => {
     let choosing = false
-    const pick = async () => {
+    const pick = async (event: Event) => {
+      const targetId = (event as CustomEvent<{ id?: string }>).detail?.id
+      if (targetId ? targetId !== session.id : !focusedRef.current) return
       if (choosing) return
       choosing = true
       try { addPathsRef.current(await pickFiles()) } catch (error) { reportError(error) } finally { choosing = false }
@@ -196,7 +199,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
       if (terminalCommand(commands, text)) openTerminal()
       void reload.current()
     } catch (error) { setStatus(t("{0} Your draft is kept.", error instanceof Error ? error.message : String(error))) }
-    finally { setSending(false); input.current?.focus() }
+    finally { setSending(false); focusedRef.current && input.current?.focus() }
   }
   const stop = () => api(`/sessions/${session.id}/input`, { text: '\x1b', paste: false, submit: false }).catch(reportError)
   // Claude Code rewinds to before the message (files stay as they are), then the edited text is sent.

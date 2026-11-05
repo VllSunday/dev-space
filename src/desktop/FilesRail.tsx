@@ -108,11 +108,11 @@ function treeKeys(event: KeyboardEvent<HTMLDivElement>) {
   rows[Math.max(0, Math.min(rows.length - 1, next))]?.focus()
 }
 
-export default function FilesRail() {
+export default function FilesRail({ embedded = false, onClose }: { embedded?: boolean; onClose?: () => void } = {}) {
   useLocale()
   const { repo } = useDesktop()
   const storageKey = `mrmak.files.${pathKey(repo)}`
-  const [open, setOpen] = useState(() => localStorage.getItem(`${storageKey}.open`) === 'true')
+  const [open, setOpen] = useState(() => embedded || localStorage.getItem(`${storageKey}.open`) === 'true')
   const [panel, setPanel] = useState<'files' | 'skills' | 'mcp' | 'settings'>('files')
   const [root, setRoot] = useState(repo)
   const [typedPath, setTypedPath] = useState(repo)
@@ -170,11 +170,12 @@ export default function FilesRail() {
   }, [refresh])
   const navigate = (path: string) => { setRoot(path); setTypedPath(path); setSelected(path); setDestination(path); if (pathKey(path) !== pathKey(root)) setRootFolder(null); setQuery(''); setError('') }
   const showPanel = (next: 'files' | 'skills' | 'mcp' | 'settings') => {
-    if (open && panel === next) { setOpen(false); return }
+    if (!embedded && open && panel === next) { setOpen(false); return }
     if (next === 'skills') { setMode('all'); navigate(`${repo}/.claude/skills`) }
     if (next === 'files' && panel !== 'files') { setMode('main'); navigate(repo) }
     setPanel(next); setOpen(true)
   }
+  const collapse = () => { if (embedded) onClose?.(); else setOpen(false) }
   const toggle = (path: string) => {
     setSelected(path); setDestination(path)
     setExpanded(current => { const next = new Set(current), key = pathKey(path); if (next.has(key)) next.delete(key); else next.add(key); return next })
@@ -249,12 +250,14 @@ export default function FilesRail() {
       api('/files/drag', { paths: [path] }).catch(error => { internalDrag.current = null; setError(message(error)); setStatus('') })
     },
   }
-  return <aside className={`files-container ${open ? 'expanded' : ''}`}>
-    {open && panel === 'settings' && <WorkspaceSettings onClose={() => setOpen(false)} />}
-    {open && panel === 'mcp' && <McpPanel onClose={() => setOpen(false)} />}
+  return <aside className={`files-container ${open ? 'expanded' : ''} ${embedded ? 'tools-embedded' : ''}`} aria-label={embedded ? 'Файлы, навыки и MCP' : undefined} onKeyDown={event => { if (embedded && event.code === 'Escape' && !event.defaultPrevented) { event.stopPropagation(); collapse() } }}>
+    {embedded && <><header className="tools-heading"><strong>Инструменты</strong><span className="ds-fill"/><button className="ds-icon" title="Дополнительные настройки" aria-label="Дополнительные настройки" onClick={() => showPanel('settings')}><Icon name="settings" size={15}/></button><button className="ds-icon" aria-label="Закрыть инструменты" onClick={collapse}><Icon name="close" size={16}/></button></header><nav className="tools-tabs" role="tablist" aria-label="Раздел инструментов">{(['files','skills','mcp'] as const).map(name => <button key={name} role="tab" aria-selected={panel === name} tabIndex={panel === name ? 0 : -1} onClick={() => showPanel(name)} onKeyDown={event => { if (event.code === 'ArrowRight' || event.code === 'ArrowLeft') { event.preventDefault(); const names=['files','skills','mcp'] as const; const next=(names.indexOf(name)+(event.code==='ArrowRight'?1:2))%3; showPanel(names[next]); (event.currentTarget.parentElement?.querySelectorAll('button')[next] as HTMLButtonElement)?.focus() } }}><Icon name={name==='files'?'folder':name} size={15}/>{name==='files'?'Файлы':name==='skills'?'Навыки':'MCP'}</button>)}</nav></>}
+
+    {open && panel === 'settings' && <WorkspaceSettings onClose={collapse} />}
+    {open && panel === 'mcp' && <McpPanel onClose={collapse} />}
     {open && (panel === 'files' || panel === 'skills') && <div className="files-panel"><header><h2>{panel === 'skills' ? t("Skills") : t("Files")}</h2><div>
       <button className="desk-icon" disabled={copying} onClick={() => input.current?.click()} title={t("Copy files into {0}", fileName(destination))} aria-label={t("Add files")}><Icon name="plus" size={16} /></button>
-      <button className="desk-icon" onClick={refresh} title={t("Refresh files")}><Icon name="refresh" size={15} /></button><button className="desk-icon" onClick={() => setOpen(false)} title={t("Collapse files")}><Icon name="close" size={17} /></button>
+      <button className="desk-icon" onClick={refresh} title={t("Refresh files")}><Icon name="refresh" size={15} /></button><button className="desk-icon" onClick={collapse} title={t("Collapse files")}><Icon name="close" size={17} /></button>
     </div></header>
       <input ref={input} type="file" multiple hidden onChange={event => { void copy(Array.from(event.target.files || []), destination); event.target.value = '' }} />
       {panel === 'files' ? <><div className="file-mode"><button className={mode === 'main' ? 'selected' : ''} onClick={() => { setMode('main'); navigate(repo) }}>{t("Main folders")}</button><button className={mode === 'all' ? 'selected' : ''} onClick={() => setMode('all')}>{t("All files")}</button></div>
@@ -268,6 +271,6 @@ export default function FilesRail() {
       <div className="file-transfer-status" aria-live="polite">{error && <p className="desk-error-inline">{t(error)}</p>}{status && <p>{status}</p>}<small title={destination}>{copying ? t("Transferring files…") : t("Drag to move · {0} to {1}", isMac ? '⌘⌫' : 'Delete', t(trashName))}</small></div>
       <footer><button onClick={() => navigate(repo)}>{t("Dev Space root")}</button></footer>
     </div>}
-    <div className="files-rail">{(['files', 'skills', 'mcp', 'settings'] as const).map(name => <button key={name} className={`rail-tool ${open && panel === name ? 'active' : ''}`} onClick={() => showPanel(name)} title={name === 'mcp' ? 'MCP' : t(name[0].toUpperCase() + name.slice(1))} aria-label={t(`Toggle ${name}`)} aria-pressed={open && panel === name}><Icon name={name === 'files' ? 'folder' : name} size={18} /><span>{name === 'mcp' ? 'MCP' : t(name[0].toUpperCase() + name.slice(1))}</span></button>)}<button className="rail-tool" title={t("Workspace help")} aria-label={t("Open Workspace help")} onClick={() => api<Preview>(`/preview?path=workspace%2F_shared%2Fhelp${getLocale() === 'ru' ? '.ru' : ''}.md`).then(setPreview).catch(reportError)}><Icon name="help" size={18} /><span>{t("Help")}</span></button><div className="rail-spacer" /><button className="desk-icon" title={t("Show Chats")} onClick={() => windowAction('chats')}><Icon name="chats" size={18} /></button></div>
+    {!embedded&&<div className="files-rail">{(['files', 'skills', 'mcp', 'settings'] as const).map(name => <button key={name} className={`rail-tool ${open && panel === name ? 'active' : ''}`} onClick={() => showPanel(name)} title={name === 'mcp' ? 'MCP' : t(name[0].toUpperCase() + name.slice(1))} aria-label={t(`Toggle ${name}`)} aria-pressed={open && panel === name}><Icon name={name === 'files' ? 'folder' : name} size={18} /><span>{name === 'mcp' ? 'MCP' : t(name[0].toUpperCase() + name.slice(1))}</span></button>)}<button className="rail-tool" title={t("Workspace help")} aria-label={t("Open Workspace help")} onClick={() => api<Preview>(`/preview?path=workspace%2F_shared%2Fhelp${getLocale() === 'ru' ? '.ru' : ''}.md`).then(setPreview).catch(reportError)}><Icon name="help" size={18} /><span>{t("Help")}</span></button><div className="rail-spacer" /><button className="desk-icon" title={t("Show Chats")} onClick={() => windowAction('chats')}><Icon name="chats" size={18} /></button></div>}
   </aside>
 }

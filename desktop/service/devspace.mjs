@@ -94,6 +94,7 @@ export class DevSpace {
           state.projects.push({ id: id('project'), name: name(data.name), path: folder, topics: [] }); break;
         }
         case 'rename-project': if (!project) throw fail('Проект не найден.'); project.name = name(data.name); break;
+        case 'project-home': if (!project || data.pageId && !state.pages.some(p=>p.id===data.pageId&&p.projectId===project.id)) throw fail('Главная страница проекта не найдена.'); project.homePageId = data.pageId || null; break;
         case 'project-path': if (!project || !(await stat(data.path).catch(() => null))?.isDirectory()) throw fail('Папка проекта не найдена.'); project.path = path.resolve(data.path); break;
         case 'create-topic': if (!project) throw fail('Проект не найден.'); project.topics.push({ id: id('topic'), name: name(data.name) }); break;
         case 'rename-topic': { const t = project?.topics.find(t => t.id === data.id); if (!t) throw fail('Тема не найдена.'); t.name = name(data.name); break; }
@@ -102,8 +103,9 @@ export class DevSpace {
         case 'create-material': {
           if (!project || !topicExists(project, data.topicId)) throw fail('Тема не найдена.');
           const files = await this.validateFiles(data.files || []), content = text(data.text || '');
+          if (data.modelPageId && !state.pages.some(p=>p.id===data.modelPageId&&p.projectId===project.id)) throw fail('Страница для 3D-модели не найдена.');
           if (!content.trim() && !files.length) throw fail('Добавьте текст или файл.');
-          state.materials.unshift({ id: id('material'), projectId: project.id, topicId: data.topicId, title: (data.title || content.split('\n')[0] || files[0]?.name || 'Без названия').slice(0,160), text: content, kind: files.some(f => f.image) ? 'image' : files.length ? 'file' : /^https?:\/\/\S+$/.test(content) ? 'link' : 'note', files, archived: false, created: now(), updated: now() }); break;
+          state.materials.unshift({ id: id('material'), projectId: project.id, topicId: data.topicId, title: (data.title || content.split('\n')[0] || files[0]?.name || 'Без названия').slice(0,160), text: content, kind: files.some(f => f.image) ? 'image' : files.length ? 'file' : /^https?:\/\/\S+$/.test(content) ? 'link' : 'note', files, ...(data.modelPageId ? {modelPageId: data.modelPageId} : {}), archived: false, created: now(), updated: now() }); break;
         }
         case 'update-material': if (!material) throw fail('Материал не найден.'); if (data.title !== undefined) material.title = name(data.title); if (data.text !== undefined) material.text = text(data.text); if (data.topicId !== undefined) { if (!topicExists(state.projects.find(p=>p.id===material.projectId),data.topicId)) throw fail('Тема не найдена.'); material.topicId = data.topicId; } if (data.archived !== undefined) material.archived = !!data.archived; material.updated = now(); break;
         case 'create-page': if (!project) throw fail('Проект не найден.'); state.pages.push({ id: id('page'), projectId: project.id, topicId: data.topicId || 'unfiled', title: name(data.title || 'Новая страница'), blocks: blocks(data.blocks || [{id:id('block'),type:'text',text:''}]), layout: data.layout === 'wiki' ? 'wiki' : 'document', sourceIds: [], revision: 0, updated: now() }); break;

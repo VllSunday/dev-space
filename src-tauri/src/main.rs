@@ -398,6 +398,7 @@ fn main() {
                                     "hide" => hide(&window),
                                     "minimize" => { let _ = window.minimize(); },
                                     "pin" => { let _ = window.set_always_on_top(event["value"].as_bool().unwrap_or(false)); },
+                                    "zoom" => { if let Some(value) = event["value"].as_f64().filter(|value| (0.75..=1.75).contains(value)) { let _ = window.set_zoom(value); } },
                                     _ => {}
                                 }
                             }

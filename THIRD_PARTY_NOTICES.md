@@ -10,6 +10,10 @@ licenses continue to apply. Packaged JavaScript dependencies retain their licens
 files, and `NODE-LICENSE.txt` accompanies the bundled Node executable. Included
 fonts retain the OFL notices under `public/fonts`.
 
+The local GLB viewer includes Three.js under MIT and unmodified Draco decoder
+binaries under Apache License 2.0. Their license texts and the upstream Draco
+README are included alongside the decoders in `ui/assets/draco`.
+
 The new application mark was generated for Dev Space. The earlier starter's
 photograph, game sample media and brand illustrations are not distributed in the
 new source history or clean CI packages.

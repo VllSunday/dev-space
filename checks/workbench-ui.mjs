@@ -1,0 +1,72 @@
+// Uses stopped fixture sessions: never launches a CLI or touches user projects.
+import { mkdtemp, mkdir, readFile, readdir } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { expect } from '@playwright/test';
+import { createService } from '../desktop/service/server.mjs';
+import { desktopAuth, launchBrowser } from '../desktop/service/test/browser.mjs';
+const repo = await mkdtemp(path.join(os.tmpdir(), 'devspace-workbench-ui-'));
+await mkdir(path.join(repo, 'workspace'));
+const service = await createService({ repo, uiDir: path.resolve('dist'), mcpOptions: { home: repo, env: {} } });
+for (const id of ['a', 'b', 'c', 'd']) service.sessions.items.set(id, service.sessions.make({ id, agent: 'shell', cwd: repo, name: 'Fixture ' + id, status: 'stopped', open: true, createdAt: new Date().toISOString(), cols: 80, rows: 24 }));
+let browser;
+try {
+  browser = await launchBrowser();
+  const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+  await desktopAuth(context, service.urls.workspace, 'ru');
+  const page = await context.newPage(); await page.goto(service.urls.workspace);
+  await expect(page.locator('.dev-space')).toBeVisible();
+  await page.keyboard.press('Control+j');
+  await expect(page.locator('.agent-cell')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Агенты на всю рабочую область', exact: true }).click();
+  await page.keyboard.press('Control+Shift+o'); await expect(page.locator('.agent-cell')).toHaveCount(2);
+  await page.keyboard.press('Control+Shift+e'); await expect(page.locator('.agent-cell')).toHaveCount(3);
+  await page.keyboard.press('Control+Shift+o'); await expect(page.locator('.agent-cell')).toHaveCount(4);
+  await page.keyboard.press('Control+Shift+o'); await expect(page.locator('.agent-cell')).toHaveCount(4);
+  await page.keyboard.press('Control+Shift+z'); await expect(page.locator('.agent-cell:visible')).toHaveCount(1);
+  await page.keyboard.press('Control+Shift+z'); await expect(page.locator('.agent-cell:visible')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Раскладка панелей', exact: true }).click();
+  await page.getByRole('button', { name: 'Раскладка: 4 панели', exact: true }).click();
+  const before = await page.locator('.agent-cell').evaluateAll(cells => cells.map(cell => ({ id: cell.dataset.agentPane, x: cell.offsetLeft, y: cell.offsetTop, width: cell.clientWidth, height: cell.clientHeight })));
+  expect(before.every(cell => cell.width > 300 && cell.height > 300)).toBe(true);
+  const singleTabPane = await page.locator('.agent-cell').evaluateAll(cells => cells.find(cell => cell.querySelectorAll('.chat-tab').length === 1)?.dataset.agentPane);
+  expect(singleTabPane).toBeTruthy();
+  await page.locator(`[data-agent-pane="${singleTabPane}"]`).focus();
+  const active = page.locator('.agent-cell[data-pane-active="true"]');
+  const activeId = await active.getAttribute('data-agent-pane');
+  await active.locator('.chat-tab-close').first().click();
+  await expect(page.locator(`[data-agent-pane="${activeId}"]`)).toHaveAttribute('data-pane-active', 'true');
+  await expect(page.locator(`[data-agent-pane="${activeId}"] .agent-pane-empty`)).toBeVisible();
+  // Empty pane dictation must never fall back to another agent's recorder.
+  await page.evaluate(() => { window.__recorderClicks = 0; for (const recorder of document.querySelectorAll('[data-dictation-toggle]')) recorder.addEventListener('click', () => window.__recorderClicks++); });
+  await page.keyboard.press('Control+Shift+Space'); expect(await page.evaluate(() => window.__recorderClicks)).toBe(0);
+  await active.getByRole('button', { name: 'Новый агент', exact: true }).click();
+  await expect(page.locator('body > .ds-chat-dialog[open]')).toBeVisible();
+  const dialog = await page.locator('.ds-chat-dialog').boundingBox(); expect(dialog.width).toBeGreaterThan(400);
+  await page.keyboard.press('Escape'); await expect(page.locator('.ds-chat-dialog')).toHaveCount(0);
+  // Cross-pane drag: move a real tab, with the same session ID, into empty pane.
+  const tab = page.locator('.chat-tab').first(), target = await active.locator('.agent-pane-empty').boundingBox(), origin = await tab.boundingBox();
+  const movedId = await tab.getAttribute('data-chat-tab');
+  await page.mouse.move(origin.x + 40, origin.y + origin.height / 2); await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 }); await page.mouse.up();
+  await expect(active.locator(`[data-chat-tab="${movedId}"]`)).toBeVisible();
+  const separator = page.getByRole('separator', { name: 'Размер панелей агентов', exact: true }).first();
+  await separator.focus(); await separator.press('ArrowRight'); await expect(separator).toHaveAttribute('aria-valuenow', '53');
+  await separator.press('Home'); await expect(separator).toHaveAttribute('aria-valuenow', '50');
+  await page.getByRole('button', { name: 'Раскладка панелей', exact: true }).click();
+  await page.getByRole('button', { name: 'Раскладка: 2 панели', exact: true }).click(); await expect(page.locator('.agent-cell')).toHaveCount(2);
+  await page.waitForTimeout(700); await page.reload(); await expect(page.locator('.agent-cell')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Файлы, навыки и MCP', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Файлы', exact: true })).toBeVisible();
+  for (const name of ['Файлы', 'Навыки', 'MCP']) { await page.getByRole('tab', { name, exact: true }).click(); await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true'); }
+  await page.getByRole('button', { name: 'Закрыть инструменты', exact: true }).click();
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  const font = (await readdir('public/fonts')).find(name => name.endsWith('.woff2'));
+  await page.locator('.ds-appearance input[type=file]').setInputFiles({ name: 'TestFont.woff2', mimeType: 'font/woff2', buffer: await readFile(path.join('public/fonts', font)) });
+  await expect(page.locator('.ds-uploaded-font')).toContainText('TestFont.woff2');
+  await expect(page.getByRole('textbox', { name: 'Шрифт интерфейса', exact: true })).toHaveValue('TestFont');
+  await page.getByText('Подключить или изменить модель Whisper', { exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Python для Whisper', exact: true })).toBeVisible();
+  await page.screenshot({ path: '.cache/workbench-settings.png' });
+  console.log('PASS: split hotkeys, 4-pane limit, zoom, preset, local close focus, safe dictation routing, native dialog, drag, resizing, persistence, tools tabs, font upload and Whisper setup');
+} finally { await browser?.close(); await service.close(); }

@@ -1,5 +1,36 @@
 # Verification record
 
+## Version 1.0.2
+
+The new pane/font/Whisper tests and focused existing project, activity, language,
+appearance and Markdown tests passed (40 tests, then all 13 project tests passed
+after adding cross-project home/model-link validation). Four independent session
+subscriptions and stale-snapshot protection are exercised through real local
+HTTP/WebSocket services without launching agents. Font upload, authorization,
+deduplication, removal and partial setting updates are covered. Whisper setup
+checks configuration before saving and preserves unrelated environment keys.
+
+The production TypeScript/Vite build passed with 396 modules. The offline Windows
+Rust release build passed for 1.0.2. Local Draco decoders and the Three.js license
+are included in packaged UI. The actual existing Python environment successfully
+loaded local large-v3 in CUDA/float16 using the worker's --check mode; microphone
+capture and speech transcription were not tested, and no user configuration was
+changed by that check.
+
+Pane interaction and model-viewer browser checks are added to the Windows release
+workflow. They have not been executed in this restricted local session because
+browser process launches previously failed with EPERM. The bounded independent
+finish review therefore inspected code, not screenshots. Its material fixes were
+applied, including preserving explicit selection intent while closing a tab.
+The static design check reported advisory token/type-ramp differences.
+
+The local-only example contains six pages, 12 materials, six example tasks,
+an original generated illustration, a vector map and three GLB blockouts. Its GLBs
+parsed successfully through the production Three.js loader. A fixture import
+preserved the existing project and checked every local asset. All example content
+and generators stay under ignored local cache or user workspace, never Git or
+the normal application distribution.
+
 ## Local Windows build
 
 The TypeScript/Vite production build and offline Rust release build passed.

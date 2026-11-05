@@ -1,6 +1,6 @@
 import { t, isLocale, setLocale } from '../i18n/core.ts'
 import { useSyncExternalStore } from 'react'
-import type { DesktopState, Preview, ServiceEvent } from './types'
+import type { CustomFont, DesktopState, Preview, ServiceEvent } from './types'
 import { anySignal } from '../lib/abort'
 
 const params = new URLSearchParams(window.location.search)
@@ -37,7 +37,7 @@ export const dismissError = () => update({ error: null })
 export const reportError = (error: unknown) => update({ error: error instanceof Error ? error.message : String(error) })
 export const contentUrl = (relative: string) => isDesktop ? `${state.contentBase}${relative}` : relative
 
-export async function api<T>(path: string, data?: unknown, method?: string, options: { keepalive?: boolean } = {}): Promise<T> {
+export async function api<T>(path: string, data?: unknown, method?: string, options: { keepalive?: boolean; signal?: AbortSignal } = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...options,
     method: method || (data === undefined ? 'GET' : 'POST'),
@@ -89,7 +89,10 @@ export function sendEvent(value: unknown) {
   if (socket?.readyState !== WebSocket.OPEN) return false
   socket.send(JSON.stringify(value)); return true
 }
+let selectionIntent = { id: '', version: 0 }
+export const chatSelectionIntent = () => selectionIntent
 export function selectChat(id: string) {
+  selectionIntent = { id, version: selectionIntent.version + 1 }
   update({ selectedId: id }); sendEvent({ type: 'selected', id })
   localStorage.setItem('mrmak.selectedChat', id)
 }
@@ -108,7 +111,7 @@ export async function startDesktop() {
 }
 function connect() {
   socket = new WebSocket(`${location.origin.replace('http:', 'ws:')}/events`)
-  socket.onopen = () => socket?.send(JSON.stringify({ type: 'auth', token, clientId, surface }))
+  socket.onopen = () => socket?.send(JSON.stringify({ type: 'auth', token, clientId, surface: surface === 'workspace' ? 'desktop' : surface }))
   socket.onmessage = ({ data }) => {
     const event = JSON.parse(data) as ServiceEvent
     if (event.type === 'connected') update({ connected: true, sessions: event.sessions || state.sessions, selectedId: event.selectedId ?? state.selectedId, coordinator: event.state || state.coordinator, error: null })
@@ -168,4 +171,16 @@ export async function speakDesktopText(sessionId: string, voice: string, text: s
 export async function uploadSpaceFile(file: File): Promise<{path: string;name: string;size: number;image: boolean}> {
  const response = await fetch('/api/devspace/files',{method:'POST',headers:{Authorization:`Bearer ${token}`,'X-File-Name':encodeURIComponent(file.name),'Content-Type':'application/octet-stream'},body:file});
  const value=await response.json(); if(!response.ok)throw new Error(value.error||'Не удалось сохранить файл');return value;
+}
+
+export async function fontBytes(id: string): Promise<ArrayBuffer> {
+  const response = await fetch(`/api/appearance/fonts/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${token}` } })
+  if (!response.ok) throw new Error('Не удалось открыть шрифт')
+  return response.arrayBuffer()
+}
+export async function uploadFont(file: File): Promise<CustomFont> {
+  const response = await fetch('/api/appearance/fonts', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'X-File-Name': encodeURIComponent(file.name) }, body: file })
+  const value = await response.json()
+  if (!response.ok) throw new Error(value.error || 'Не удалось загрузить шрифт')
+  return value
 }

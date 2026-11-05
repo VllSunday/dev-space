@@ -1,0 +1,7 @@
+.ds-model-viewer{margin:20px 0;border:1px solid var(--ds-border);border-radius:8px;overflow:hidden}
+.ds-model-tools{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-bottom:1px solid var(--ds-border)}
+.ds-model-tools select{max-width:100%;min-width:0}
+.ds-model-canvas{height:clamp(240px,45vh,520px);background:#202126;touch-action:none}
+.ds-model-canvas canvas{display:block;width:100%;height:100%}
+.ds-page-body .ds-model-viewer p{padding:12px;margin:0;font-size:12px;line-height:1.6}
+.ds-model-viewer [role=alert]{color:var(--ds-text);font-weight:600}

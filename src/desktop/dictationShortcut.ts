@@ -25,10 +25,12 @@ export function installDictationShortcut() {
     const modal = document.querySelector('dialog:modal')
     const visible = roots.filter(root => root.getClientRects().length && getComputedStyle(root).visibility !== 'hidden' && !root.closest('[inert]') && (!modal || modal.contains(root)))
     const focused = document.activeElement
-    const target = visible.find(root => root.closest('form, .chat-context')?.contains(focused))
+    const focusedPane = focused instanceof HTMLElement ? focused.closest('[data-agent-pane]') : null
+    const target = visible.find(root => root.closest('[data-agent-pane]')?.contains(focused)) || visible.find(root => root.closest('form, .chat-context')?.contains(focused))
+    if (focusedPane && !target) return
     // A different editor is not a request to dictate into a chat in the background.
     if (!target && focused instanceof HTMLElement && focused.matches('input, textarea, [contenteditable="true"], [role="textbox"]') && !focused.closest('.xterm')) return
-    const root = target || visible[0]
+    const root = target || visible.find(root => root.closest('[data-pane-active="true"]')) || visible.find(root => root.closest('.ds-capture')) || visible.find(root => !root.closest('[data-agent-pane]'))
     if (!root) return
     if (root.dataset.dictationPhase === 'idle') click(root, '[data-dictation-toggle]')
     else if (root.dataset.dictationPhase === 'saved') click(root, '[data-dictation-retry]')

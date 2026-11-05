@@ -12,6 +12,12 @@ type Drag = { id: string; group?: string; pinned: boolean; startX: number; start
 type Drop = { id: string; position: 'before' | 'after' } | { group: string } | { beside: string; pinned: boolean; targetId: string; position: 'before' | 'after' }
 type Menu = { kind: 'tab'; item: ChatSession; x: number; y: number } | { kind: 'group'; group: TabGroup; x: number; y: number }
 
+export interface PaneTabActions {
+  targets: { id: string; name: string }[]
+  move: (tabId: string, paneId: string) => void
+  drag: (tabId: string, x: number, y: number, phase: 'move' | 'drop' | 'cancel') => boolean
+}
+
 function Swatches({ kind, value, onChange }: { kind: 'tab' | 'group'; value: string | null; onChange: (value: string | null) => void }) {
   useLocale()
   const label = kind === 'group' ? t('Group color') : t('Tab color')
@@ -21,9 +27,10 @@ function Swatches({ kind, value, onChange }: { kind: 'tab' | 'group'; value: str
   </div>
 }
 
-export default function ChatTabs({ items, selectedId, agents, groups, collapsed, groupColors, historyCounts, choose, close, toggleGroup, collapseOthers, setGroupColor }: {
+export default function ChatTabs({ items, selectedId, agents, groups, collapsed, groupColors, historyCounts, choose, close, toggleGroup, collapseOthers, setGroupColor, pane }: {
   items: ChatSession[]; selectedId?: string; agents: AgentInfo[]; groups: string[]; collapsed: string[]; groupColors: Record<string, string>; historyCounts: Record<string, number>
   choose: (id: string) => void; close: (id: string) => void; toggleGroup: (name: string) => void; collapseOthers: (name: string) => void; setGroupColor: (name: string, value: string | null) => void
+  pane?: PaneTabActions
 }) {
   useLocale()
   const gesture = useRef<Drag | null>(null)
@@ -43,7 +50,7 @@ export default function ChatTabs({ items, selectedId, agents, groups, collapsed,
     setEditing(null)
     if (item && name && name !== item.name) api(`/sessions/${item.id}`, { name }, 'PATCH').catch(reportError)
   }
-  const clear = () => { gesture.current = null; drop.current = null; setDragging(null); setTarget(null) }
+  const clear = () => { if (gesture.current && !gesture.current.group) pane?.drag(gesture.current.id, 0, 0, 'cancel'); gesture.current = null; drop.current = null; setDragging(null); setTarget(null) }
   const clearRef = useRef(clear)
   useEffect(() => { clearRef.current = clear })
   useEffect(() => {
@@ -78,6 +85,7 @@ export default function ChatTabs({ items, selectedId, agents, groups, collapsed,
     if (!current.moving && Math.hypot(event.clientX - current.startX, event.clientY - current.startY) < 6) return
     current.moving = true; suppressClick.current = true
     setDragging({ id: current.id, group: current.group, pinned: current.pinned, x: event.clientX, y: event.clientY })
+    if (!current.group && pane?.drag(current.id, event.clientX, event.clientY, 'move')) { drop.current = null; setTarget(null); return }
     const point = document.elementFromPoint(event.clientX, event.clientY)
     const element = point?.closest<HTMLElement>('[data-chat-tab]')
     const item = items.find(item => item.id === element?.dataset.chatTab)
@@ -100,9 +108,11 @@ export default function ChatTabs({ items, selectedId, agents, groups, collapsed,
     }
     drop.current = next; setTarget(next)
   }
-  function finish() {
+  function finish(event: React.PointerEvent<HTMLButtonElement>) {
     const current = gesture.current, destination = drop.current
+    const handled = current?.moving && !current.group && pane?.drag(current.id, event.clientX, event.clientY, 'drop')
     clear()
+    if (handled) return
     if (!current?.moving || !destination) return
     if (current.group) {
       const targetId = 'beside' in destination ? destination.targetId : 'id' in destination ? destination.id : null
@@ -149,6 +159,7 @@ ${item.cwd}`}>
     {menu && <div className="tab-menu" role="menu" style={{ left: Math.max(4, Math.min(menu.x, window.innerWidth - 260)), top: Math.max(4, Math.min(menu.y, window.innerHeight - (menu.kind === 'tab' ? 470 : 290))) }}>
       {menu.kind === 'tab' ? <>
         <strong>{menu.item.name}</strong>
+        {pane && pane.targets.map(target => <button key={target.id} type="button" role="menuitem" onClick={() => { pane.move(menu.item.id, target.id); setMenu(null) }}>Переместить в {target.name.toLowerCase()}</button>)}
         {rename === null ? <button type="button" role="menuitem" onClick={() => setRename(menu.item.name)}>{t("Rename chat")}</button> : <form className="tab-menu-rename" onSubmit={event => { event.preventDefault(); if (rename.trim()) patch(menu.item.id, { name: rename.trim() }) }}><input autoFocus value={rename} maxLength={100} aria-label={t("Chat name")} onChange={event => setRename(event.target.value)} /><button type="submit">{t("Save")}</button></form>}
         <button type="button" role="menuitem" onClick={() => patch(menu.item.id, { pinned: !menu.item.pinned })}>{menu.item.pinned ? t("Unpin from History") : t("Pin in History")}</button>
         <span>{t("Tab color")}</span>

@@ -61,3 +61,4 @@ checks/*-profile/
 /public/assets/mak-nose.svg
 /public/assets/mak-nose-chats.svg
 /scripts/build-brand-assets.mjs
+/public/assets/draco/

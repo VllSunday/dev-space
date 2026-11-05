@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T16:14:00.717938+00:00",
+  "generatedAt": "2026-11-05T18:06:22.319575+00:00",
   "title": "Design System: Dev Space",
   "extensions": {
     "colorMeta": {
@@ -67,24 +67,28 @@
       "primary-ink": {
         "role": "neutral",
         "displayName": "?????? ??????? ???????? ??????"
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "?????? ????????? ??????"
       }
     },
     "typographyMeta": {
       "body": {
-        "displayName": "Segoe UI",
-        "purpose": "???????? ????? ????????; ????????? fallback ??? ???????? Geist."
+        "displayName": "????????????? UI-?????",
+        "purpose": "--font-body; ??????? Segoe UI ? ????????? fallback. ????????? ? ??????????? ????? ?????????? ? ??????????."
       },
       "document-body": {
         "displayName": "????? ?????????",
-        "purpose": "????????? ?????? ? ?????? ??????????????."
+        "purpose": "????????? UI-????? ? ????? ????????? ??????????? ??????????."
       },
       "code": {
         "displayName": "???????? ?????",
-        "purpose": "Markdown ? ???."
+        "purpose": "Consolas/monospace ??? Markdown ? ?????? ????; ?? ????????????? ????????????? ? ????????? ????? ?????????."
       },
       "terminal": {
-        "displayName": "????? ????????",
-        "purpose": "????????? ??????? ?? ?????????? ??????????, ?????? ????????? ????????? ?????????."
+        "displayName": "????????????? ????????",
+        "purpose": "--font-mono ? family xterm; ??????? Cascadia Code, ????? Consolas, SF Mono ? monospace. ?????? 10?24px, ????? 13px; ????? native zoom 75?175% ????????."
       }
     },
     "shadows": [
@@ -100,8 +104,8 @@
       },
       {
         "name": "tools-overlay",
-        "value": "-10px 0 40px #0006",
-        "purpose": "?????????? ?????? ??????, ??????? ? MCP."
+        "value": "-10px 5px 30px #0004",
+        "purpose": "?????????? ?????????????? ??????????? ?????/??????/MCP."
       },
       {
         "name": "agent-overlay",
@@ -112,6 +116,11 @@
         "name": "embedded-dialog",
         "value": "0 14px 60px #0007",
         "purpose": "??????????????? ???????????? Chats-????????."
+      },
+      {
+        "name": "workbench-menu",
+        "value": "0 8px 24px #0008",
+        "purpose": "???? ?????????, ???????? ? ??????? ????????? ???????."
       }
     ],
     "motion": [
@@ -147,7 +156,7 @@
       "refersTo": "button-primary",
       "description": "??????? primary-?????? ????? ????????.",
       "html": "<button class=\"ds-preview-primary\">????????</button>",
-      "css": ".ds-preview-primary{font:13px/1.5 'Segoe UI',system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:var(--ds-text);color:#111215;font-weight:550;border:1px solid transparent;}.ds-preview-primary:hover{background:#fff}.ds-preview-primary:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-primary:disabled{opacity:.45;cursor:default}"
+      "css": ".ds-preview-primary{font:13px/1.5 var(--font-body);display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:var(--ds-text);color:#111215;font-weight:550;border:1px solid transparent;}.ds-preview-primary:hover{background:#fff}.ds-preview-primary:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-primary:disabled{opacity:.45;cursor:default}"
     },
     {
       "name": "?????????????",
@@ -155,7 +164,7 @@
       "refersTo": "button-secondary",
       "description": "??????? secondary-?????? ????? ????????.",
       "html": "<button class=\"ds-preview-secondary\">?????????????</button>",
-      "css": ".ds-preview-secondary{font:13px/1.5 'Segoe UI',system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:none;color:var(--ds-text);border:1px solid var(--ds-input);}.ds-preview-secondary:hover{background:var(--ds-hover)}.ds-preview-secondary:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-secondary:disabled{opacity:.45;cursor:default}"
+      "css": ".ds-preview-secondary{font:13px/1.5 var(--font-body);display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:none;color:var(--ds-text);border:1px solid var(--ds-input);}.ds-preview-secondary:hover{background:var(--ds-hover)}.ds-preview-secondary:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-secondary:disabled{opacity:.45;cursor:default}"
     },
     {
       "name": "???????",
@@ -163,7 +172,7 @@
       "refersTo": "button-ghost",
       "description": "??????? ghost-?????? ????? ????????.",
       "html": "<button class=\"ds-preview-ghost\">???????</button>",
-      "css": ".ds-preview-ghost{font:13px/1.5 'Segoe UI',system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:none;color:var(--ds-text);border:0;}.ds-preview-ghost:hover{background:var(--ds-hover)}.ds-preview-ghost:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-ghost:disabled{opacity:.45;cursor:default}"
+      "css": ".ds-preview-ghost{font:13px/1.5 var(--font-body);display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:none;color:var(--ds-text);border:0;}.ds-preview-ghost:hover{background:var(--ds-hover)}.ds-preview-ghost:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-ghost:disabled{opacity:.45;cursor:default}"
     },
     {
       "name": "Text field",
@@ -171,7 +180,7 @@
       "refersTo": "field",
       "description": "???? ?? ????????? ?????????? ???????????.",
       "html": "<input class=\"ds-preview-field\" aria-label=\"???????? ????\" placeholder=\"???????? ????\">",
-      "css": ".ds-preview-field{font:13px/1.5 'Segoe UI',system-ui,sans-serif;color:var(--ds-text);background:var(--ds-canvas);border:1px solid var(--ds-input);border-radius:5px;padding:7px 9px;box-shadow:none;min-width:0}.ds-preview-field::placeholder{color:var(--ds-faint)}.ds-preview-field:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
+      "css": ".ds-preview-field{font:13px/1.5 var(--font-body);color:var(--ds-text);background:var(--ds-canvas);border:1px solid var(--ds-input);border-radius:5px;padding:7px 9px;box-shadow:none;min-width:0}.ds-preview-field::placeholder{color:var(--ds-faint)}.ds-preview-field:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
     },
     {
       "name": "Navigation row",
@@ -179,7 +188,7 @@
       "refersTo": "navigation-item",
       "description": "?????????? ????????? ????? ? sidebar.",
       "html": "<button class=\"ds-preview-nav\" aria-current=\"page\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7V5h6l2 2h10v13H3Z\"/></svg><span>??? ? ???????</span></button>",
-      "css": ".ds-preview-nav{font:13px/1.5 'Segoe UI',system-ui,sans-serif;display:flex;align-items:center;justify-content:flex-start;gap:7px;min-height:33px;padding:6px 8px;border:0;border-radius:5px;background:none;color:#c9cbd0;font-size:12px;text-align:left;cursor:pointer}.ds-preview-nav svg{color:var(--ds-muted)}.ds-preview-nav:hover{background:var(--ds-hover)}.ds-preview-nav[aria-current=page]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-nav:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
+      "css": ".ds-preview-nav{font:13px/1.5 var(--font-body);display:flex;align-items:center;justify-content:flex-start;gap:7px;min-height:33px;padding:6px 8px;border:0;border-radius:5px;background:none;color:#c9cbd0;font-size:12px;text-align:left;cursor:pointer}.ds-preview-nav svg{color:var(--ds-muted)}.ds-preview-nav:hover{background:var(--ds-hover)}.ds-preview-nav[aria-current=page]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-nav:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
     },
     {
       "name": "Source chip",
@@ -187,7 +196,7 @@
       "refersTo": "source-chip",
       "description": "????? ?????????? ? ??????? ??????.",
       "html": "<span class=\"ds-preview-chip\" tabindex=\"0\">???? ???????? ????? ?????????</span>",
-      "css": ".ds-preview-chip{font:13px/1.5 'Segoe UI',system-ui,sans-serif;display:inline-block;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--ds-muted);padding:3px 7px;border:1px solid var(--ds-border);border-radius:4px}.ds-preview-chip:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
+      "css": ".ds-preview-chip{font:13px/1.5 var(--font-body);display:inline-block;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--ds-muted);padding:3px 7px;border:1px solid var(--ds-border);border-radius:4px}.ds-preview-chip:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
     },
     {
       "name": "Gallery material",
@@ -195,7 +204,7 @@
       "refersTo": "gallery-item",
       "description": "???????? ? ???????: ??? ?? ????? ? ?????, ??? ? ?????.",
       "html": "<article class=\"ds-preview-card\"><input type=\"checkbox\" aria-label=\"??????? ????????\"><button><h3>??????? ???????????, ? ?? ???????</h3><p>???? ???????????? ?????????.</p><small>???????</small></button></article>",
-      "css": ".ds-preview-card{font:13px/1.5 'Segoe UI',system-ui,sans-serif;display:flex;align-items:flex-start;gap:8px;max-width:340px;padding:13px;border:1px solid var(--ds-border);border-radius:7px;background:var(--ds-canvas);color:var(--ds-text)}.ds-preview-card input{accent-color:var(--ds-accent);width:14px;height:14px;margin-top:7px}.ds-preview-card button{font:inherit;display:block;text-align:left;background:none;border:0;border-radius:5px;padding:2px 0;color:inherit;cursor:pointer}.ds-preview-card button:hover{background:none}.ds-preview-card button:focus-visible,.ds-preview-card input:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-card h3{font-size:13px;font-weight:550;line-height:1.35;letter-spacing:-.02em;margin:0 0 5px}.ds-preview-card p{font-size:12px;line-height:1.7;color:#b8bbc1;margin:0}.ds-preview-card small{display:block;font-size:10px;color:var(--ds-faint);margin-top:9px}"
+      "css": ".ds-preview-card{font:13px/1.5 var(--font-body);display:flex;align-items:flex-start;gap:8px;max-width:340px;padding:13px;border:1px solid var(--ds-border);border-radius:7px;background:var(--ds-canvas);color:var(--ds-text)}.ds-preview-card input{accent-color:var(--ds-accent);width:14px;height:14px;margin-top:7px}.ds-preview-card button{font:inherit;display:block;text-align:left;background:none;border:0;border-radius:5px;padding:2px 0;color:inherit;cursor:pointer}.ds-preview-card button:hover{background:none}.ds-preview-card button:focus-visible,.ds-preview-card input:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-card h3{font-size:13px;font-weight:550;line-height:1.35;letter-spacing:-.02em;margin:0 0 5px}.ds-preview-card p{font-size:12px;line-height:1.7;color:#b8bbc1;margin:0}.ds-preview-card small{display:block;font-size:10px;color:var(--ds-faint);margin-top:9px}"
     },
     {
       "name": "Capture composer",
@@ -203,31 +212,32 @@
       "refersTo": "capture",
       "description": "?????????? ???? ?????, ?????? ? ???????? ? ????? ??????.",
       "html": "<div class=\"ds-preview-capture\"><textarea aria-label=\"??????? ???????\" placeholder=\"???????? ?????, ???????? ?????? ??? ?????? ???????\" rows=\"2\"></textarea><div><button>?????</button><span></span><button class=\"ds-preview-capture-submit\">????????</button></div></div>",
-      "css": ".ds-preview-capture{font:13px/1.5 'Segoe UI',system-ui,sans-serif;max-width:580px;background:var(--ds-canvas);color:var(--ds-text);border:1px solid #ffffff2c;border-radius:8px;padding:11px 12px 8px}.ds-preview-capture:focus-within{border-color:#96b2d780}.ds-preview-capture textarea{font:12px/1.65 'Segoe UI',system-ui,sans-serif;display:block;width:100%;border:0;outline:0;background:none;color:inherit;resize:none;min-height:43px;max-height:145px;padding:0}.ds-preview-capture textarea::placeholder{color:var(--ds-faint)}.ds-preview-capture>div{display:flex;align-items:center;gap:3px;margin-top:8px}.ds-preview-capture>div>span{flex:1}.ds-preview-capture button{font:11px/1.5 'Segoe UI',system-ui,sans-serif;min-height:28px;padding:4px 7px;color:var(--ds-muted);border:0;border-radius:5px;background:none;cursor:pointer}.ds-preview-capture button:hover{background:var(--ds-hover)}.ds-preview-capture button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-capture button.ds-preview-capture-submit{background:var(--ds-text);color:#111215;border:1px solid transparent;font-weight:550}.ds-preview-capture button.ds-preview-capture-submit:hover{background:#fff}"
+      "css": ".ds-preview-capture{font:13px/1.5 var(--font-body);max-width:580px;background:var(--ds-canvas);color:var(--ds-text);border:1px solid #ffffff2c;border-radius:8px;padding:11px 12px 8px}.ds-preview-capture:focus-within{border-color:#96b2d780}.ds-preview-capture textarea{font:12px/1.65 var(--font-body);display:block;width:100%;border:0;outline:0;background:none;color:inherit;resize:none;min-height:43px;max-height:145px;padding:0}.ds-preview-capture textarea::placeholder{color:var(--ds-faint)}.ds-preview-capture>div{display:flex;align-items:center;gap:3px;margin-top:8px}.ds-preview-capture>div>span{flex:1}.ds-preview-capture button{font:11px/1.5 var(--font-body);min-height:28px;padding:4px 7px;color:var(--ds-muted);border:0;border-radius:5px;background:none;cursor:pointer}.ds-preview-capture button:hover{background:var(--ds-hover)}.ds-preview-capture button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-capture button.ds-preview-capture-submit{background:var(--ds-text);color:#111215;border:1px solid transparent;font-weight:550}.ds-preview-capture button.ds-preview-capture-submit:hover{background:#fff}"
     },
     {
-      "name": "Agent row",
-      "kind": "nav",
-      "refersTo": "agent-item",
-      "description": "?????? ? ????????? ?????? ???????? ??????????? ??? ????????????.",
-      "html": "<button class=\"ds-preview-agent\" aria-label=\"????? ??????? ? ????????\"><span class=\"ds-preview-glyph\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m5 7 5 5-5 5M13 17h6\"/></svg><i></i></span><span><strong>????? ???????</strong><small>????????</small></span></button>",
-      "css": ".ds-preview-agent{font:13px/1.5 'Segoe UI',system-ui,sans-serif;display:flex;align-items:center;justify-content:flex-start;gap:10px;padding:8px;margin:1px 0;min-height:28px;text-align:left;border:0;border-radius:5px;color:var(--ds-text);background:none;cursor:pointer}.ds-preview-agent:hover{background:var(--ds-hover)}.ds-preview-agent:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-glyph{position:relative;width:24px;height:25px;display:flex;align-items:center;justify-content:center;color:#d2d4d9;flex-shrink:0}.ds-preview-glyph i{position:absolute;right:-1px;bottom:0;width:7px;height:7px;border-radius:50%;border:1px solid var(--ds-chrome);background:var(--ds-warning)}.ds-preview-agent strong{display:block;font-size:11px;font-weight:500}.ds-preview-agent small{display:block;font-size:10px;color:var(--ds-faint);margin-top:3px}"
-    },
-    {
-      "name": "Pane separator",
+      "name": "Agent workbench cell",
       "kind": "custom",
-      "refersTo": "pane-separator",
-      "description": "??????????? ????????? ??????? ????????? ?????? ????????? ???????.",
-      "html": "<div class=\"ds-preview-separator\" role=\"separator\" aria-label=\"?????? ??????? ???????\" aria-orientation=\"vertical\" aria-valuemin=\"320\" aria-valuenow=\"500\" tabindex=\"0\"></div>",
-      "css": ".ds-preview-separator{display:block;width:8px;height:120px;flex-shrink:0;cursor:col-resize;background:none;position:relative;touch-action:none;outline-offset:-2px}.ds-preview-separator:hover:before,.ds-preview-separator:focus-visible:before{content:'';position:absolute;top:30%;bottom:30%;width:2px;background:var(--ds-accent);left:3px;border-radius:2px}.ds-preview-separator:focus-visible{outline:2px solid var(--ds-accent)}"
+      "refersTo": "agent-cell",
+      "description": "?????? ?????????? ????????? ???????. ????????? ??????? ?????????? ????????? ?????????? ?????; ??????? ????? ????????? ????????? ?????????.",
+      "html": "<section class=\"ds-preview-agent-cell ds-preview-agent-active\" aria-label=\"?????? ??????? 1\"><header><span>?????? 1</span><button aria-label=\"???????? ?????? 1\">?</button></header><nav aria-label=\"??????? ??????\"><button aria-pressed=\"true\">????? ???????</button><button aria-pressed=\"false\">????????</button></nav><div class=\"ds-preview-agent-content\">??????? ??????? ?????????</div></section>",
+      "css": ".ds-preview-agent-cell{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border:3px solid var(--ds-chrome);border-radius:7px;background:var(--ds-canvas);color:var(--ds-text);font:12px/1.5 var(--font-body);outline:0}.ds-preview-agent-cell:after{content:\"\";position:absolute;inset:0;border:1px solid var(--ds-border);border-radius:4px;pointer-events:none}.ds-preview-agent-active:after{border-color:var(--ds-accent)}.ds-preview-agent-cell>header{height:24px;min-height:24px;display:flex;align-items:center;gap:4px;padding:0 6px;font-size:10px;color:var(--ds-faint);background:var(--ds-chrome)}.ds-preview-agent-cell>header>span{flex:1}.ds-preview-agent-cell button{font:11px var(--font-body);color:var(--ds-muted);border:0;border-radius:5px;background:none;padding:7px;cursor:pointer}.ds-preview-agent-cell>header button{height:22px;min-height:22px;width:24px;padding:3px}.ds-preview-agent-cell nav{display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto;overflow-y:hidden;min-height:37px;background:var(--ds-chrome);padding:4px 6px}.ds-preview-agent-cell button:hover{background:var(--ds-hover)}.ds-preview-agent-cell button[aria-pressed=true]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-agent-cell button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-agent-content{padding:7px 5px 6px 8px;color:var(--ds-muted);background:var(--ds-canvas)}"
+    },
+    {
+      "name": "Full-height tools tabs",
+      "kind": "nav",
+      "refersTo": "tools-tab",
+      "description": "??????? ????? ?????? ???????????? ? ????????????? ??????? ???????? ? ????????? ?????????????? ??????????.",
+      "html": "<nav class=\"ds-preview-tools-tabs\" role=\"tablist\" aria-label=\"?????? ????????????\"><button role=\"tab\" aria-selected=\"true\" tabindex=\"0\">?????</button><button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">??????</button><button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">MCP</button></nav>",
+      "css": ".ds-preview-tools-tabs{display:flex;align-items:center;gap:4px;padding:8px 10px;flex-shrink:0;border-bottom:1px solid var(--ds-border);background:var(--ds-surface);font:12px/1.5 var(--font-body)}.ds-preview-tools-tabs button{flex:1;font:inherit;min-height:28px;border:0;border-radius:5px;padding:7px 8px;background:none;color:var(--ds-muted);cursor:pointer}.ds-preview-tools-tabs button:hover{background:var(--ds-hover)}.ds-preview-tools-tabs button[aria-selected=true]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-tools-tabs button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
     }
   ],
   "narrative": {
     "northStar": "Herdr Graphite",
-    "overview": "Dev Space использует подтверждённое пользователем направление: минималистичную тёмную оболочку Herdr, Segoe UI и одну рабочую область с проектами и раскрываемыми агентами. Код реализует близкие графитовые поверхности, компактные строки навигации, нейтральные контролы и видимые состояния. Новый знак двух панелей присутствует в заголовке; прежний маскот не является частью новой идентичности.\n\nЭтот документ извлечён из `src/devspace/devspace.css`, `DevSpace.tsx`, `PageEditor.tsx` и встроенных переопределений действующего Chats. Он описывает реализацию, а не результаты визуального или пользовательского тестирования: браузерная и нативная проверка в доступной среде не выполнены. Старый файл `design/DESIGN.md` относится к прежнему прототипу и не задаёт систему этой реализации.",
+    "overview": "Dev Space использует подтверждённое пользователем направление: минималистичную тёмную оболочку Herdr и одну рабочую область проекта с независимой областью агентов. Segoe UI остаётся исходным UI-шрифтом; в реализации 1.0.2 его можно заменить локальным или загруженным шрифтом. Код сохраняет графитовые поверхности, компактные строки навигации, нейтральные контролы и видимые состояния. Знак двух панелей присутствует в заголовке; прежний маскот не является частью новой идентичности.\n\nЭтот документ обновлён по `devspace.css`, `workbench.css`, `page-model-viewer.css`, компонентам рабочей области и настроек, `LocalWhisperSetup.tsx`, `display.ts` и встроенному FilesRail/Chats. Он описывает реализованную систему 1.0.2, а не результаты визуального или пользовательского тестирования: браузерная и нативная UI-проверка в доступной среде не выполнены. Старый файл `design/DESIGN.md` относится к прежнему прототипу. Локальные игровые примеры, изображения и seed-генераторы из игнорируемой `.cache/local-game-demo` не определяют дизайн-систему и не относятся к распространяемому продукту.",
     "keyCharacteristics": [
       "Тональные поверхности и тонкие разделители вместо декоративного свечения.",
       "Одна общая оболочка материалов, документов и живых агентских сессий.",
+      "От одной до четырёх независимых панелей агентов с переносимыми вкладками.",
       "Сворачиваемая навигация, сохраняющая значки и состояния агентов.",
       "Короткая UI-типографика и более свободный текст документа.",
       "Наложенные служебные поверхности появляются по запросу."
@@ -235,12 +245,12 @@
     "rules": [
       {
         "name": "The Tonal Selection Rule",
-        "body": "Текущее место и выбранный режим выделяются тональной подложкой. Состояния не требуют цветного декоративного контура вокруг всей панели.",
+        "body": "Текущее место, вкладка и выбранный режим выделяются тональной подложкой. У активной ячейки агента дополнительно есть тонкий акцентный контур: он указывает получателя ввода. Это функциональное состояние не переносится на произвольные неактивные контейнеры.",
         "section": "colors"
       },
       {
         "name": "The UI And Code Rule",
-        "body": "Обычная навигация, формы и документы используют Segoe UI. Моноширинная типографика предназначена для терминального содержимого, исходного Markdown и кода.",
+        "body": "Обычная навигация, формы и документы используют выбранный UI-шрифт через общую переменную. Семья терминала настраивается отдельно; исходный Markdown и кодовые блоки сохраняют свой моноширинный набор.",
         "section": "typography"
       },
       {
@@ -252,6 +262,7 @@
     "dos": [
       "Do использовать одну графитовую оболочку для Space и встроенных агентов.",
       "Do сохранять видимые значки и доступные описания агентов при сворачивании навигации.",
+      "Do различать выбранную вкладку и активную ячейку, сохраняя видимый получатель клавиатурного ввода.",
       "Do выделять выбранное место тоном, а фокус — видимым контуром.",
       "Do ограничивать ширину документа и разделять прокрутку ленты и постоянного ввода.",
       "Do сообщать сохранение, ошибку и состояние агента текстом вместе с графическим знаком."
@@ -260,6 +271,7 @@
       "Don't добавлять прежнего маскота, звезду или цветное свечение в новую рабочую оболочку.",
       "Don't превращать каждую строку или абзац в карточку с тенью.",
       "Don't распространять частные унаследованные стили переписки на все новые поверхности.",
+      "Don't закреплять пользовательские шрифты, аппаратную конфигурацию или локальные демонстрационные материалы как обязательную часть продукта.",
       "Don't считать статическое описание кода подтверждением браузерной, нативной или мобильной проверки."
     ]
   }
