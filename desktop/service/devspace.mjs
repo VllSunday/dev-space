@@ -2,6 +2,7 @@ import path from 'node:path';
 import { mkdir, readFile, readdir, stat, writeFile, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { saveJson, realFile } from './util.mjs';
+import { instantiateTemplate } from './project-template.mjs';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const id = prefix => `${prefix}-${randomUUID().slice(0, 12)}`;
@@ -88,6 +89,12 @@ export class DevSpace {
       const topicExists = (p, t) => t === 'unfiled' || p?.topics.some(x => x.id === t);
       const material = state.materials.find(m => m.id === data.id), page = state.pages.find(p => p.id === data.id);
       switch (data.action) {
+        case 'import-template': {
+          const example=await instantiateTemplate(this.repo,data.templateId),base=example.projects[0].name;
+          let suffix=2;while(state.projects.some(p=>p.name===example.projects[0].name))example.projects[0].name=base+' ('+(suffix++)+')';
+          for(const key of ['projects','pages','materials','tasks'])state[key].push(...example[key]);
+          break;
+        }
         case 'create-project': {
           let folder = data.path?.trim() || this.repo; folder = path.resolve(folder);
           if (!(await stat(folder).catch(() => null))?.isDirectory()) throw fail('Выберите существующую папку проекта.');

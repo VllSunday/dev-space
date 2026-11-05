@@ -13,6 +13,7 @@ const cleanupFile = path.join(root, 'release', 'migration-cleanup.json');
 const cleanup = existsSync(cleanupFile) ? JSON.parse(readFileSync(cleanupFile, 'utf8')) : null;
 if (cleanup && (!new RegExp(`^${owner}/[A-Za-z0-9_.-]+$`).test(cleanup.repository) || cleanup.repository === repository || !Number.isSafeInteger(cleanup.repositoryId) || cleanup.removeAfterVerifiedRelease !== true)) throw Error('Invalid migration cleanup instructions');
 const resume = process.argv.includes('--resume');
+const makePublic = process.argv.includes('--public');
 const tagOption = process.argv.indexOf('--tag');
 const requestedTag = tagOption < 0 ? null : process.argv[tagOption + 1];
 if (tagOption >= 0 && (!resume || !/^v\d+\.\d+\.\d+$/.test(requestedTag || ''))) throw Error('--tag vMAJOR.MINOR.PATCH requires --resume');
@@ -45,9 +46,9 @@ console.log(`${resume ? 'Resuming' : 'Publishing'} ${repository} ${tag}. No prox
 const progress = value => { mkdirSync(path.join(root, 'release'), { recursive: true }); writeFileSync(path.join(root, 'release/publication-progress.json'), JSON.stringify({ repository, tag, commit: head, updatedAt: new Date().toISOString(), ...value }, null, 2)); };
 const profile = api('user', { pick: '{login}' });
 if (profile.login.toLowerCase() !== owner.toLowerCase()) throw Error(`GitHub CLI must be signed in as ${owner}; current account: ${profile.login}`);
-let remote = api(`repos/${repository}`, { allowFailure: true, pick: '{id, fork, owner: {login: .owner.login}}' });
+let remote = api(`repos/${repository}`, { allowFailure: true, pick: '{id, fork, private, owner: {login: .owner.login}}' });
 if (!remote && resume) throw Error('Cannot resume: published repository is not accessible');
-if (!remote) remote = api('user/repos', { method: 'POST', body: { name: 'dev-space', description: 'Local projects, materials and agent terminals', private: true, auto_init: false }, pick: '{id, fork, owner: {login: .owner.login}}' });
+if (!remote) remote = api('user/repos', { method: 'POST', body: { name: 'dev-space', description: 'Local projects, materials and agent terminals', private: true, auto_init: false }, pick: '{id, fork, private, owner: {login: .owner.login}}' });
 if (remote.fork || remote.owner?.login.toLowerCase() !== owner.toLowerCase()) throw Error('The target must be an independent repository owned by the expected account');
 if (!resume) {
 const origin = command('git', ['remote', 'get-url', 'origin'], { allowFailure: true });
@@ -72,7 +73,7 @@ const publishedTag = api(`repos/${repository}/commits/${tag}`, { pick: '{sha}' }
 if (publishedTag.sha !== head) throw Error('Published release tag points to a different source commit');
 const rootCommit = api(`repos/${repository}/git/commits/${roots[0]}`, { pick: '{sha,parents}' });
 if (rootCommit.parents.length !== 0) throw Error('New repository contains unexpected parent history');
-progress({stage:'source-verified'});
+progress({stage:'source-verified',visibility:remote.private?'private':'public'});
 
 console.log(`Source verified. Waiting for Windows, Linux and macOS builds: https://github.com/${repository}/actions`);
 let run;
@@ -115,6 +116,12 @@ for (const name of expected.filter(name => name !== 'SHA256SUMS.txt')) {
 writeFileSync(path.join(root, 'release', 'publication-result.json'), JSON.stringify({ repository, tag, commit: head, release: release.html_url, assets: expected, verifiedAt: new Date().toISOString() }, null, 2));
 progress({stage:'verified',runId:run.databaseId,release:release.html_url,assets:expected});
 console.log(`Release and all ${expected.length - 1} packages verified: ${release.html_url}`);
+if(makePublic){
+  const visible=api(`repos/${repository}`,{method:'PATCH',body:{private:false},pick:'{private}'});
+  if(visible.private!==false)throw Error('Release is verified, but public visibility could not be confirmed.');
+  console.log(`Public downloads enabled: ${release.html_url}`);
+  progress({stage:'public',runId:run.databaseId,release:release.html_url,assets:expected,visibility:'public'});
+}
 
 // Cleanup is opt-in through a separately prepared private migration file.
 if (cleanup) {
@@ -127,4 +134,4 @@ if (cleanup) {
   }
 }
 console.log('Publication complete.');
-progress({stage:'complete',runId:run.databaseId,release:release.html_url,assets:expected});
+progress({stage:'complete',runId:run.databaseId,release:release.html_url,assets:expected,visibility:makePublic||!remote.private?'public':'private'});

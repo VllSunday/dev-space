@@ -1,0 +1,744 @@
+{
+  "schemaVersion": 1,
+  "revision": 0,
+  "projects": [
+    {
+      "id": "demo-wind-islands",
+      "name": "Острова ветра · Пример",
+      "path": "__PROJECT_PATH__",
+      "topics": [
+        {
+          "id": "gameplay",
+          "name": "Геймплей"
+        },
+        {
+          "id": "world",
+          "name": "Локации"
+        },
+        {
+          "id": "assets",
+          "name": "Ассеты и 3D"
+        },
+        {
+          "id": "development",
+          "name": "Разработка"
+        },
+        {
+          "id": "references",
+          "name": "Референсы"
+        }
+      ],
+      "homePageId": "demo-wind-home"
+    }
+  ],
+  "pages": [
+    {
+      "id": "demo-wind-home",
+      "projectId": "demo-wind-islands",
+      "topicId": "unfiled",
+      "title": "Острова ветра · Wiki",
+      "blocks": [
+        {
+          "id": "demo-block-001",
+          "type": "image",
+          "text": "Концепт мира · сгенерированная иллюстрация",
+          "asset": "workspace/devspace/assets/demo-wind-hero.png"
+        },
+        {
+          "id": "demo-block-005",
+          "type": "text",
+          "text": "Небольшое приключение о роботе-курьере, который соединяет парящие острова, возвращая ветер старым маякам."
+        },
+        {
+          "id": "demo-block-006",
+          "type": "heading",
+          "text": "Начни с этого"
+        },
+        {
+          "id": "demo-block-007",
+          "type": "text",
+          "text": "Это учебный проект Dev Space, не готовая игра. В левой колонке открой «Геймплей», «Локации» или «3D viewer · Ассеты». Здесь можно менять тексты, вставлять изображения, добавлять заметки и задачи — всё настоящее и сохраняется локально."
+        },
+        {
+          "id": "demo-block-008",
+          "type": "heading",
+          "text": "Одно понятное ядро"
+        },
+        {
+          "id": "demo-block-009",
+          "type": "text",
+          "text": "Три острова, один герой, одна доставка. Сначала делаем короткий вертикальный срез: дойти до маяка, решить задачу с ветром и открыть путь. Визуальное направление — светлые острова, потёртый металл и тёплые детали."
+        },
+        {
+          "id": "demo-block-010",
+          "type": "heading",
+          "text": "Как устроено рабочее пространство"
+        },
+        {
+          "id": "demo-block-011",
+          "type": "bullet",
+          "text": "Темы — постоянные коробки для сырья: геймплей, мир, ассеты, разработка и референсы."
+        },
+        {
+          "id": "demo-block-012",
+          "type": "bullet",
+          "text": "Страницы — собранное объяснение: дизайн игры, описание локаций, каталог моделей и решения."
+        },
+        {
+          "id": "demo-block-013",
+          "type": "bullet",
+          "text": "Материалы — исходные заметки, картинки и файлы. Они сохраняются, когда агент оформляет страницу."
+        },
+        {
+          "id": "demo-block-014",
+          "type": "bullet",
+          "text": "Задачи — только конкретные действия с результатом. Не каждую идею нужно превращать в задачу."
+        },
+        {
+          "id": "demo-block-015",
+          "type": "heading",
+          "text": "Попробуй сам"
+        },
+        {
+          "id": "demo-block-002",
+          "type": "check",
+          "text": "Открой «3D viewer · Ассеты» и покрути три модели.",
+          "checked": false
+        },
+        {
+          "id": "demo-block-003",
+          "type": "check",
+          "text": "Добавь в «Референсы» свою картинку через Ctrl+V или перетаскивание.",
+          "checked": false
+        },
+        {
+          "id": "demo-block-004",
+          "type": "check",
+          "text": "Открой «Редактор» и измени один абзац этой страницы.",
+          "checked": false
+        },
+        {
+          "id": "demo-block-016",
+          "type": "text",
+          "text": "Выше — материалы по темам. Нажми на запись, чтобы открыть описание и вложения. «Редактор» меняет блоки, Markdown подходит для массовой правки, Wiki показывает собранную страницу."
+        }
+      ],
+      "layout": "wiki",
+      "sourceIds": [],
+      "revision": 0,
+      "updated": "2026-11-05T12:00:00.000Z",
+      "collections": [
+        {
+          "topicId": "gameplay",
+          "view": "list",
+          "pinnedIds": []
+        },
+        {
+          "topicId": "world",
+          "view": "list",
+          "pinnedIds": []
+        },
+        {
+          "topicId": "assets",
+          "view": "list",
+          "pinnedIds": []
+        },
+        {
+          "topicId": "development",
+          "view": "list",
+          "pinnedIds": []
+        },
+        {
+          "topicId": "references",
+          "view": "gallery",
+          "pinnedIds": []
+        }
+      ]
+    },
+    {
+      "id": "demo-wind-gameplay",
+      "projectId": "demo-wind-islands",
+      "topicId": "gameplay",
+      "title": "Геймплей · Короткий дизайн",
+      "blocks": [
+        {
+          "id": "demo-block-017",
+          "type": "heading",
+          "text": "Обещание игроку"
+        },
+        {
+          "id": "demo-block-018",
+          "type": "text",
+          "text": "Дорога к следующему острову видна заранее. Починка механизма открывает новый маршрут, а не просто заполняет индикатор."
+        },
+        {
+          "id": "demo-block-019",
+          "type": "heading",
+          "text": "Основной цикл"
+        },
+        {
+          "id": "demo-block-020",
+          "type": "text",
+          "text": "Ориентир → исследование → деталь → настройка маяка → новый путь → доставка. Весь учебный маршрут должен помещаться в 10–15 минут; это целевой размер, ещё не замер."
+        },
+        {
+          "id": "demo-block-021",
+          "type": "heading",
+          "text": "Управление"
+        },
+        {
+          "id": "demo-block-022",
+          "type": "bullet",
+          "text": "WASD — движение. Мышь — камера. Пробел — прыжок. E — взаимодействие. Это предлагаемые бинды игры, не шорткаты Dev Space."
+        },
+        {
+          "id": "demo-block-023",
+          "type": "heading",
+          "text": "Головоломка маяка"
+        },
+        {
+          "id": "demo-block-024",
+          "type": "text",
+          "text": "Три кольца направляют поток ветра. Игрок поворачивает кольца, пока траектория не соединит маяк с принимающей площадкой. Правильное действие слышно и видно, без отдельного экрана победы."
+        },
+        {
+          "id": "demo-block-025",
+          "type": "heading",
+          "text": "Что не входит в первый срез"
+        },
+        {
+          "id": "demo-block-026",
+          "type": "bullet",
+          "text": "Бои, крафт, экономика, открытый мир и десятки коллекционных предметов. Их можно обсуждать позже, когда работает короткий маршрут."
+        },
+        {
+          "id": "demo-block-027",
+          "type": "heading",
+          "text": "Критерий проверки"
+        },
+        {
+          "id": "demo-block-028",
+          "type": "check",
+          "text": "Новый игрок понимает цель без текстового обучения."
+        },
+        {
+          "id": "demo-block-029",
+          "type": "check",
+          "text": "После ремонта маяка он замечает открывшийся путь."
+        },
+        {
+          "id": "demo-block-030",
+          "type": "check",
+          "text": "Падение не требует повторять уже решённую головоломку."
+        }
+      ],
+      "layout": "document",
+      "sourceIds": [
+        "demo-wind-pitch",
+        "demo-wind-loop",
+        "demo-wind-open-question"
+      ],
+      "revision": 0,
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-world",
+      "projectId": "demo-wind-islands",
+      "topicId": "world",
+      "title": "Локации · Маршрут",
+      "blocks": [
+        {
+          "id": "demo-block-031",
+          "type": "image",
+          "text": "Учебная схема связей островов",
+          "asset": "workspace/devspace/assets/demo-wind-map.svg"
+        },
+        {
+          "id": "demo-block-032",
+          "type": "heading",
+          "text": "01 · Маячная пристань"
+        },
+        {
+          "id": "demo-block-033",
+          "type": "text",
+          "text": "Спокойное начало. С причала видны маяк, недостающая деталь и место приземления на соседнем острове. Учим базовое движение и одно взаимодействие."
+        },
+        {
+          "id": "demo-block-034",
+          "type": "heading",
+          "text": "02 · Облачный сад"
+        },
+        {
+          "id": "demo-block-035",
+          "type": "text",
+          "text": "Два потока поднимают лёгкую платформу. Игрок применяет знакомое действие в новой ситуации. Деревья и мост ведут взгляд к обсерватории."
+        },
+        {
+          "id": "demo-block-036",
+          "type": "heading",
+          "text": "03 · Штормовая обсерватория"
+        },
+        {
+          "id": "demo-block-037",
+          "type": "text",
+          "text": "Комбинация изученных действий: подготовить поток, дождаться безопасного окна и пройти через купол. После доставки открывается быстрый путь домой."
+        },
+        {
+          "id": "demo-block-038",
+          "type": "heading",
+          "text": "Как дополнять"
+        },
+        {
+          "id": "demo-block-039",
+          "type": "text",
+          "text": "Добавляй скриншоты блокинга прямо в страницу или в тему «Локации». Отделяй описание задачи игрока от списка необходимых ассетов. Так агент сможет оформить документ, не потеряв первоначальные идеи."
+        }
+      ],
+      "layout": "document",
+      "sourceIds": [
+        "demo-wind-location-1",
+        "demo-wind-location-2",
+        "demo-wind-location-3",
+        "demo-wind-route"
+      ],
+      "revision": 0,
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-models",
+      "projectId": "demo-wind-islands",
+      "topicId": "assets",
+      "title": "3D viewer · Ассеты",
+      "blocks": [
+        {
+          "id": "demo-block-040",
+          "type": "heading",
+          "text": "Три локальных GLB"
+        },
+        {
+          "id": "demo-block-041",
+          "type": "text",
+          "text": "Вверху страницы — интерактивный просмотр. Выбери courier, beacon или island. Левая кнопка вращает, колёсико приближает, правая сдвигает. Есть режимы без текстур, сетки и нормалей."
+        },
+        {
+          "id": "demo-block-042",
+          "type": "heading",
+          "text": "Это blockout"
+        },
+        {
+          "id": "demo-block-043",
+          "type": "text",
+          "text": "Модели собраны специально для этого примера из простых форм. Они показывают силуэт и структуру ассетов; здесь нет рига, анимаций или готового игрового уровня."
+        },
+        {
+          "id": "demo-block-044",
+          "type": "heading",
+          "text": "Добавить свою модель"
+        },
+        {
+          "id": "demo-block-045",
+          "type": "text",
+          "text": "Экспортируй из Blender: glTF 2.0 → GLB, с материалами и текстурами внутри. Нажми «Загрузить 3D-модель» или перетащи GLB в область просмотра. Файл появится в материалах темы и будет связан с этой страницей."
+        },
+        {
+          "id": "demo-block-046",
+          "type": "heading",
+          "text": "Карточка ассета"
+        },
+        {
+          "id": "demo-block-047",
+          "type": "code",
+          "text": "Имя: wind_beacon\nНазначение: открывает переход между островами\nСтатус: blockout\nМасштаб: 1 единица = 1 метр (условность примера)\nСледующий шаг: проверить размер рядом с героем"
+        }
+      ],
+      "layout": "document",
+      "sourceIds": [
+        "demo-wind-hero-model",
+        "demo-wind-beacon-model",
+        "demo-wind-island-model"
+      ],
+      "revision": 0,
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-plan",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Разработка · Первый срез",
+      "blocks": [
+        {
+          "id": "demo-block-048",
+          "type": "heading",
+          "text": "Цель"
+        },
+        {
+          "id": "demo-block-049",
+          "type": "text",
+          "text": "Довести один короткий маршрут от старта до доставки. Всё ниже — пример планирования, а не отчёт о разработанной игре."
+        },
+        {
+          "id": "demo-block-050",
+          "type": "check",
+          "text": "Зафиксировать основной цикл и объём первого среза."
+        },
+        {
+          "id": "demo-block-051",
+          "type": "check",
+          "text": "Сделать серый блокинг первой локации."
+        },
+        {
+          "id": "demo-block-052",
+          "type": "check",
+          "text": "Проверить камеру, прыжок и безопасное падение."
+        },
+        {
+          "id": "demo-block-053",
+          "type": "check",
+          "text": "Добавить одну задачу с маяком."
+        },
+        {
+          "id": "demo-block-054",
+          "type": "check",
+          "text": "Дать пройти уровень человеку, который не знает замысел."
+        },
+        {
+          "id": "demo-block-055",
+          "type": "heading",
+          "text": "Решение · Спокойное исследование"
+        },
+        {
+          "id": "demo-block-056",
+          "type": "quote",
+          "text": "Возвращаем игрока на безопасную площадку без штрафа. Цель — любопытство и поиск пути, а не наказание за ошибку. Пока это гипотеза для теста."
+        },
+        {
+          "id": "demo-block-057",
+          "type": "heading",
+          "text": "Передача агенту"
+        },
+        {
+          "id": "demo-block-058",
+          "type": "text",
+          "text": "Выдели заметки темы и нажми «Собрать с агентом». Сформулируй результат: например, «Собери дизайн головоломки маяка из этих материалов, перечисли открытые вопросы». Задание сначала вставится в чат без отправки. Предложение страницы можно просмотреть и применить отдельно."
+        }
+      ],
+      "layout": "document",
+      "sourceIds": [
+        "demo-wind-open-question"
+      ],
+      "revision": 0,
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-guide",
+      "projectId": "demo-wind-islands",
+      "topicId": "unfiled",
+      "title": "Как устроен этот пример",
+      "blocks": [
+        {
+          "id": "demo-block-059",
+          "type": "heading",
+          "text": "Сначала собирай, потом оформляй"
+        },
+        {
+          "id": "demo-block-060",
+          "type": "text",
+          "text": "Создай тему и складывай туда короткие заметки, ссылки, скриншоты и файлы. Не нужно ждать агента ради каждой записи. Для отдельного документа создай страницу и редактируй её блоками или через Markdown."
+        },
+        {
+          "id": "demo-block-061",
+          "type": "heading",
+          "text": "Где какая работа"
+        },
+        {
+          "id": "demo-block-062",
+          "type": "bullet",
+          "text": "Материалы: быстро зафиксировать и найти исходник."
+        },
+        {
+          "id": "demo-block-063",
+          "type": "bullet",
+          "text": "Страницы: объяснить решение и показать собранный результат."
+        },
+        {
+          "id": "demo-block-064",
+          "type": "bullet",
+          "text": "Задачи: назначить конкретное действие, отслеживать статус."
+        },
+        {
+          "id": "demo-block-065",
+          "type": "bullet",
+          "text": "Агенты: исследовать, писать код и оформлять материалы; панели можно делить до четырёх частей."
+        },
+        {
+          "id": "demo-block-066",
+          "type": "heading",
+          "text": "Самостоятельно и с агентом"
+        },
+        {
+          "id": "demo-block-067",
+          "type": "text",
+          "text": "Тексты, загрузка файлов, темы, страницы и задачи доступны сразу. Агент полезен, когда нужен синтез, код или нестандартная страница проекта. Стандартная Wiki уже собирается без отдельной HTML-страницы."
+        },
+        {
+          "id": "demo-block-068",
+          "type": "heading",
+          "text": "Локальность"
+        },
+        {
+          "id": "demo-block-069",
+          "type": "text",
+          "text": "Этот проект и его материалы добавлены только на этот компьютер. Они не включены в Git и обычную сборку приложения. Изображение сгенерировано, GLB и схема авторские учебные заготовки; внешние ассеты и аккаунты не требуются."
+        },
+        {
+          "id": "demo-block-070",
+          "type": "heading",
+          "text": "Необязательный следующий шаг"
+        },
+        {
+          "id": "demo-block-071",
+          "type": "text",
+          "text": "Замени иллюстрацию своим артом, GLB — реальными ассетами, а заметки — решениями по своей игре. Для рабочего приложения оставь ту же логику и переименуй темы в «Пользователи», «Сценарии», «Интерфейс», «Разработка» и «Проверки»."
+        }
+      ],
+      "layout": "document",
+      "sourceIds": [],
+      "revision": 0,
+      "updated": "2026-11-05T12:00:00.000Z"
+    }
+  ],
+  "materials": [
+    {
+      "id": "demo-wind-pitch",
+      "projectId": "demo-wind-islands",
+      "topicId": "gameplay",
+      "title": "Идея · курьер между островами",
+      "text": "Игрок — маленький робот-курьер. Ремонтируя маяки ветра, он соединяет три острова и доставляет последнее письмо. Исследование, простые пространственные головоломки и спокойный темп. Сначала делаем один завершённый маршрут, без большого открытого мира.",
+      "kind": "note",
+      "files": [],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-loop",
+      "projectId": "demo-wind-islands",
+      "topicId": "gameplay",
+      "title": "Основной игровой цикл",
+      "text": "Замечаю ориентир → исследую остров → нахожу деталь → настраиваю поток ветра → открываю путь → доставляю письмо. Каждый ремонт меняет маршрут и даёт видимый результат. Проверяем понятность на коротком уровне, без диалоговых подсказок.",
+      "kind": "note",
+      "files": [],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-keyart",
+      "projectId": "demo-wind-islands",
+      "topicId": "references",
+      "title": "Визуальное направление",
+      "text": "Сгенерированный концепт для учебного проекта: мягкий дневной свет, камень и медь, бирюзовые механизмы, оранжевый шарф героя. Это иллюстрация идеи, а не скриншот работающей игры.",
+      "kind": "image",
+      "files": [
+        {
+          "path": "workspace/devspace/assets/demo-wind-hero.png",
+          "name": "hero.png",
+          "size": 2150546,
+          "image": true
+        }
+      ],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-location-1",
+      "projectId": "demo-wind-islands",
+      "topicId": "world",
+      "title": "Маячная пристань",
+      "text": "Стартовая локация. Игрок учится ходить, прыгать и взаимодействовать. Из причала виден сломанный маяк и следующий остров. Задача: найти предохранитель рядом с пристанью и повернуть два кольца маяка. После ремонта включается поток к Облачному саду.",
+      "kind": "note",
+      "files": [],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-location-2",
+      "projectId": "demo-wind-islands",
+      "topicId": "world",
+      "title": "Облачный сад",
+      "text": "Тихая зона с высокими соснами и парящими камнями. Игрок перенаправляет два потока, чтобы поднять мост. Новая идея: поток может двигать не только игрока, но и лёгкую платформу. Никаких новых кнопок управления.",
+      "kind": "note",
+      "files": [],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-location-3",
+      "projectId": "demo-wind-islands",
+      "topicId": "world",
+      "title": "Штормовая обсерватория",
+      "text": "Финальная локация учебного маршрута. Купол с медной крышей, короткие безопасные окна между порывами ветра. Здесь сочетаются ранее изученные механики. Награда — доставка письма и открытие обратного короткого пути.",
+      "kind": "note",
+      "files": [],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-route",
+      "projectId": "demo-wind-islands",
+      "topicId": "world",
+      "title": "Карта связей островов",
+      "text": "Схема помогает обсуждать последовательность знакомства с механиками. Верхний путь основной, нижний — обратный. Такие схемы удобно хранить в теме рядом с заметками и версионировать отдельно от кода.",
+      "kind": "image",
+      "files": [
+        {
+          "path": "workspace/devspace/assets/demo-wind-map.svg",
+          "name": "map.svg",
+          "size": 1318,
+          "image": true
+        }
+      ],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-hero-model",
+      "projectId": "demo-wind-islands",
+      "topicId": "assets",
+      "title": "Курьер · GLB blockout",
+      "text": "Учебная модель из простых форм. Проверяет силуэт, масштаб и акцент шарфа; без рига, анимации и UV. Открой страницу «3D viewer · Ассеты» и выбери courier.glb.",
+      "kind": "file",
+      "files": [
+        {
+          "path": "workspace/devspace/assets/demo-wind-courier.glb",
+          "name": "courier.glb",
+          "size": 23768,
+          "image": false
+        }
+      ],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z",
+      "modelPageId": "demo-wind-models"
+    },
+    {
+      "id": "demo-wind-beacon-model",
+      "projectId": "demo-wind-islands",
+      "topicId": "assets",
+      "title": "Маяк ветра · GLB blockout",
+      "text": "Учебная модель окружения. Отдельные части: основание, башня, медные кольца и кристалл. Материалы встроены в GLB; внешние текстуры не требуются.",
+      "kind": "file",
+      "files": [
+        {
+          "path": "workspace/devspace/assets/demo-wind-beacon.glb",
+          "name": "beacon.glb",
+          "size": 24152,
+          "image": false
+        }
+      ],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z",
+      "modelPageId": "demo-wind-models"
+    },
+    {
+      "id": "demo-wind-island-model",
+      "projectId": "demo-wind-islands",
+      "topicId": "assets",
+      "title": "Парящий остров · GLB blockout",
+      "text": "Учебный набор окружения: скала, трава, сосны и пристань. Цель — проверить пропорции острова и читаемость маршрута. Это исходная форма для дальнейшей работы художника.",
+      "kind": "file",
+      "files": [
+        {
+          "path": "workspace/devspace/assets/demo-wind-island.glb",
+          "name": "island.glb",
+          "size": 48228,
+          "image": false
+        }
+      ],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z",
+      "modelPageId": "demo-wind-models"
+    },
+    {
+      "id": "demo-wind-open-question",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Решить · что делать при падении?",
+      "text": "Предлагаем мгновенно возвращать игрока на последнюю безопасную площадку без потери прогресса. Пока это гипотеза: проверить, не станет ли исследование слишком лёгким. Из этой заметки можно сделать задачу или передать её агенту вместе с игровым циклом.",
+      "kind": "note",
+      "files": [],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    },
+    {
+      "id": "demo-wind-capture",
+      "projectId": "demo-wind-islands",
+      "topicId": "unfiled",
+      "title": "Как складывать сырой материал",
+      "text": "Это пример записи без темы. Сюда можно быстро вставить текст, скриншот через Ctrl+V или перетащить файл. Не нужно сразу выбирать идеальный формат. Когда накопится материал — перемести в тему, выдели записи и попроси агента собрать страницу.",
+      "kind": "note",
+      "files": [],
+      "archived": false,
+      "created": "2026-11-05T12:00:00.000Z",
+      "updated": "2026-11-05T12:00:00.000Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "demo-task-1",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Пример · определить объём вертикального среза",
+      "status": "done",
+      "sourceId": "demo-wind-pitch"
+    },
+    {
+      "id": "demo-task-2",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Пример · собрать блокинг Маячной пристани",
+      "status": "todo",
+      "sourceId": "demo-wind-location-1"
+    },
+    {
+      "id": "demo-task-3",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Пример · проверить поведение при падении",
+      "status": "todo",
+      "sourceId": "demo-wind-open-question"
+    },
+    {
+      "id": "demo-task-4",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Пример · прототип поворота колец маяка",
+      "status": "todo",
+      "sourceId": "demo-wind-beacon-model"
+    },
+    {
+      "id": "demo-task-5",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Пример · заменить blockout героя на модель с ригом",
+      "status": "todo",
+      "sourceId": "demo-wind-hero-model"
+    },
+    {
+      "id": "demo-task-6",
+      "projectId": "demo-wind-islands",
+      "topicId": "development",
+      "title": "Пример · провести первый плейтест маршрута",
+      "status": "todo",
+      "sourceId": "demo-wind-route"
+    }
+  ]
+}

@@ -1,5 +1,35 @@
 # Verification record
 
+## Version 1.0.5
+
+The optional bundled game template is included under desktop/service/templates,
+using the pristine generated seed rather than the user's edited workspace.
+The focused suite passed 40 tests, skipped one child-process regression blocked
+by the environment, and failed none. Template tests cover independent IDs and
+asset copies, imported page editing, retained existing content, duplicate imports,
+undo/restart, rejected template paths and stale-revision requests before writes.
+Both template tests passed again after adding the page-edit assertion.
+
+TypeScript/Vite (403 modules) and the offline Rust release build passed.
+The release workflow validates the new first-run and project-dialog buttons with
+checks/template-ui.mjs, including Wiki navigation, a bundled GLB and no automatic
+agent launch. That new fixture was not run locally; the user declined further
+manual browser checks after the previous full pass. A bounded independent static
+review found no material blocker; see template-finish-review.md.
+
+README screenshots were captured from the actual installed 1.0.4 native app,
+maximized at 2560x1392. They show four live Codex/Claude terminal sessions, the
+Wiki and tool settings, a loaded/rotated GLB, and centered appearance/dictation
+settings. These confirm the final 1.0.4 centering/icon fixes in the native UI,
+but do not prove the new 1.0.5 template buttons. No terminal task, model,
+permission, login, microphone or speech provider was changed for screenshots.
+
+The user's live projects were not copied into Git. Only the explicitly authorized
+pristine teaching template and selected application screenshots are public source.
+Native Linux/macOS build and download verification remain release-job results,
+not local Windows test results. Public repository visibility requires an explicit
+--public publishing choice; without it, the publisher preserves visibility.
+
 ## Version 1.0.4
 
 The production TypeScript/Vite build passed with 403 modules. The offline Windows

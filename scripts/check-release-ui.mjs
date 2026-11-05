@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const checks=['layout-ui','workbench-ui','viewer-ui','wiki-navigation-ui'];
+const checks=['layout-ui','workbench-ui','viewer-ui','wiki-navigation-ui','template-ui'];
 const results=[];
 for(const name of checks){
  console.log(`\nChecking ${name}...`);

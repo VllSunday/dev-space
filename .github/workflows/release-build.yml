@@ -113,11 +113,8 @@ jobs:
           @{ version = $version } | ConvertTo-Json | Set-Content src-tauri/release-config.json
 
       - run: npm run build
-      - name: Verify full-window desktop layout
-        run: node checks/layout-ui.mjs
-
-      - name: Verify pane, font and model interactions
-        run: node checks/workbench-ui.mjs && node checks/viewer-ui.mjs && node checks/wiki-navigation-ui.mjs
+      - name: Verify layout, panes, tools, Wiki, models and first-run template
+        run: node scripts/check-release-ui.mjs
 
       - name: Build NSIS installer and binary
         run: npm exec -- tauri build --ci --bundles nsis --config src-tauri/release-config.json

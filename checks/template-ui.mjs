@@ -1,0 +1,32 @@
+import {mkdtemp,readFile} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {expect} from '@playwright/test';
+import {createService} from '../desktop/service/server.mjs';
+import {desktopAuth,launchBrowser} from '../desktop/service/test/browser.mjs';
+const repo=await mkdtemp(path.join(os.tmpdir(),'devspace-template-ui-'));
+const service=await createService({repo,uiDir:path.resolve('dist'),mcpOptions:{home:repo,env:{}}});
+let browser;
+try{
+ browser=await launchBrowser({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+ const context=await browser.newContext({viewport:{width:1500,height:950}});await desktopAuth(context,service.urls.workspace,'ru');
+ const page=await context.newPage();await page.goto(service.urls.workspace);
+ await page.getByRole('button',{name:'Посмотреть пример',exact:true}).click();
+ await expect(page.locator('.ds-wiki h1')).toHaveText('Острова ветра · Wiki');
+ await expect(page.locator('.ds-wiki nav button')).toHaveCount(6);
+ await expect(page.locator('.ds-navigation')).toContainText('3D viewer · Ассеты');
+ const first=JSON.parse(await readFile(path.join(repo,'workspace/devspace/space.json'),'utf8'));
+ expect(first.projects).toHaveLength(2);expect(first.pages).toHaveLength(6);expect(first.materials).toHaveLength(12);expect(service.sessions.items.size).toBe(0);
+ await page.locator('.ds-wiki nav').getByRole('button',{name:'Локации',exact:true}).click();await expect(page.locator('.ds-topic-record')).toHaveCount(4);
+ await page.locator('.ds-navigation').getByRole('button',{name:'3D viewer · Ассеты',exact:true}).click();
+ await expect(page.locator('.ds-model-viewer [role=status]')).toContainText('Вращение',{timeout:20000});
+ await page.getByRole('button',{name:'Новый проект',exact:true}).click();
+ await page.getByRole('dialog',{name:'Новый проект',exact:true}).getByRole('button',{name:'Открыть учебный проект',exact:true}).click();
+ await expect(page.locator('.ds-wiki h1')).toHaveText('Острова ветра · Wiki');
+ await expect(page.getByRole('combobox',{name:'Проект',exact:true})).toContainText('Острова ветра · Пример (2)');
+ const after=JSON.parse(await readFile(path.join(repo,'workspace/devspace/space.json'),'utf8'));
+ expect(after.projects).toHaveLength(3);expect(after.pages.filter(p=>p.projectId===first.projects[1].id)).toEqual(first.pages);expect(service.sessions.items.size).toBe(0);
+ await page.screenshot({path:'.cache/template-desktop.png'});
+ await page.setViewportSize({width:390,height:844});await expect(page.locator('.ds-wiki')).toBeVisible();await page.screenshot({path:'.cache/template-mobile.png'});
+ console.log('PASS: first-run example, independent copy, Wiki navigation, bundled GLB, project dialog and no agent launch');
+}finally{await browser?.close();await service.close()}
