@@ -5,7 +5,8 @@ export interface Project { id: string; name: string; path: string; topics: Topic
 export interface Material { id: string; projectId: string; topicId: string; title: string; text: string; kind: 'note'|'image'|'file'|'link'|'legacy'; files: SpaceFile[]; archived: boolean; created: string; updated: string; legacyId?: string; modelPageId?: string }
 export type BlockType = 'text'|'heading'|'bullet'|'check'|'quote'|'code'|'image'
 export interface Block { id: string; type: BlockType; text: string; checked?: boolean; asset?: string }
-export interface Page { id: string; projectId: string; topicId: string; title: string; blocks: Block[]; sourceIds: string[]; revision: number; layout: 'document'|'wiki'; updated: string }
+export interface PageCollection { topicId: string; view: 'list'|'gallery'; pinnedIds?: string[] }
+export interface Page { id: string; projectId: string; topicId: string; title: string; blocks: Block[]; sourceIds: string[]; revision: number; layout: 'document'|'wiki'; updated: string; collections?: PageCollection[] }
 export interface Task { id: string; projectId: string; topicId: string; title: string; status: 'todo'|'working'|'review'|'done'; sourceId?: string }
 export interface SpaceState { schemaVersion: 1; revision: number; projects: Project[]; materials: Material[]; pages: Page[]; tasks: Task[] }
 export interface Proposal { id: string; projectId: string; title: string; blocks: Block[]; sourceIds: string[]; layout: 'document'|'wiki'; baseRevision: number; stale: boolean; error?: string }
@@ -21,6 +22,18 @@ export function sessionStatus(session: ChatSession) {
   return {kind:'inactive',label:'Готов к задаче'}
 }
 export const normalizePath=(value:string)=>value.replace(/\\/g,'/').replace(/\/$/,'').toLocaleLowerCase()
+export function pageCollections(page:Page,project:Project):PageCollection[] {
+ const values=page.collections??(page.layout==='wiki'?project.topics.map(t=>({topicId:t.id,view:'list' as const})):[])
+ return values.filter(c=>['list','gallery'].includes(c.view)&&(['all','unfiled'].includes(c.topicId)||project.topics.some(t=>t.id===c.topicId)))
+}
+export function collectionMaterials(materials:Material[],projectId:string,collection:PageCollection,limit=Infinity) {
+ const pinned=collection.pinnedIds||[]
+ return materials.filter(m=>m.projectId===projectId&&!m.archived&&(collection.topicId==='all'||m.topicId===collection.topicId)&&(collection.view!=='gallery'||m.files.some(f=>f.image))).sort((a,b)=>{
+  const ai=pinned.indexOf(a.id),bi=pinned.indexOf(b.id)
+  if(ai>=0||bi>=0)return ai<0?1:bi<0?-1:ai-bi
+  return b.created.localeCompare(a.created)||a.id.localeCompare(b.id)
+ }).slice(0,limit)
+}
 export function remainingDraft(saved:{text:string;files:SpaceFile[]},current:{text:string;files:SpaceFile[]}) {
  const paths=new Set(saved.files.map(f=>f.path))
  return {text:current.text===saved.text?'':current.text.startsWith(saved.text)?current.text.slice(saved.text.length):current.text,files:current.files.filter(f=>!paths.has(f.path))}

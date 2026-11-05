@@ -1,4 +1,4 @@
-/* Desktop surfaces share the Luminous Mak palette. Reports keep their own styles. */
+/* Desktop surfaces share palette tokens. Reports keep their own styles. */
 .desktop-root{height:100dvh;display:flex;overflow:hidden;background:var(--bg);color:var(--text-bright);font-family:var(--font-body);font-size:13px}
 .desktop-root button,.desktop-root input{font:inherit}
 .desktop-root button{cursor:pointer}

@@ -16,6 +16,7 @@ try {
   await desktopAuth(context, service.urls.workspace, 'ru');
   const page = await context.newPage(); await page.goto(service.urls.workspace);
   await expect(page.locator('.dev-space')).toBeVisible();
+  await expect.poll(()=>page.locator('.ds-titlebar>img').evaluate(image=>image.naturalWidth)).toBeGreaterThan(0);
   await page.keyboard.press('Control+j');
   await expect(page.locator('.agent-cell')).toHaveCount(1);
   await page.getByRole('button', { name: 'Агенты на всю рабочую область', exact: true }).click();
@@ -63,12 +64,19 @@ try {
   await page.mouse.move(handleBox.x + 3, handleBox.y + 100); await page.mouse.down();
   await page.mouse.move(handleBox.x - 157, handleBox.y + 100, { steps: 8 }); await page.mouse.up();
   await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(toolsBox.width + 160));
+  const wideHandleBox = await toolsHandle.boundingBox();
+  await page.mouse.move(wideHandleBox.x + 3, wideHandleBox.y + 100); await page.mouse.down();
+  await page.mouse.move(wideHandleBox.x + 163, wideHandleBox.y + 100, { steps: 8 }); await page.mouse.up();
+  await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(toolsBox.width));
   await toolsHandle.focus(); await toolsHandle.press('ArrowLeft');
+  await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(toolsBox.width + 16));
+  for (let i=0;i<10;i++) await toolsHandle.press('ArrowLeft');
   await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(toolsBox.width + 176));
   const expectedToolsWidth = toolsBox.width + 176;
   for (const name of ['Файлы', 'Навыки', 'MCP']) { await page.getByRole('tab', { name, exact: true }).click(); await expect(page.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true'); }
   await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(expectedToolsWidth));
   expect(await tools.evaluate(el => getComputedStyle(el).getPropertyValue('--surface-solid').trim())).toBe('#17191d');
+  expect(await tools.evaluate(el => getComputedStyle(el).getPropertyValue('--pink-dim').trim())).toBe('#ffffff17');
   await expect.poll(async () => JSON.parse(await readFile(path.join(repo, '.devspace/settings.json'), 'utf8')).spaceLayout.toolsWidth).toBe(expectedToolsWidth);
   await page.reload(); await page.getByRole('button', { name: 'Файлы, навыки и MCP', exact: true }).click();
   await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(expectedToolsWidth));
@@ -77,10 +85,12 @@ try {
   await page.setViewportSize({ width: 1600, height: 1000 }); await expect(toolsHandle).toHaveAttribute('aria-valuenow', String(expectedToolsWidth));
   await page.getByRole('button', { name: 'Закрыть инструменты', exact: true }).click();
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  const settingsBox=await page.locator('.ds-dialog').boundingBox();
+  expect(Math.abs(settingsBox.x-(1600-settingsBox.width)/2)).toBeLessThan(2);
   const font = (await readdir('public/fonts')).find(name => name.endsWith('.woff2'));
   await page.locator('.ds-appearance input[type=file]').setInputFiles({ name: 'TestFont.woff2', mimeType: 'font/woff2', buffer: await readFile(path.join('public/fonts', font)) });
   await expect(page.locator('.ds-uploaded-font')).toContainText('TestFont.woff2');
-  await expect(page.getByRole('textbox', { name: 'Шрифт интерфейса', exact: true })).toHaveValue('TestFont');
+  await expect(page.getByRole('combobox', { name: 'Шрифт интерфейса', exact: true })).toHaveValue('TestFont');
   await page.getByText('Подключить или изменить модель Whisper', { exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Python для Whisper', exact: true })).toBeVisible();
   await page.screenshot({ path: '.cache/workbench-settings.png' });

@@ -10,3 +10,5 @@ for (const name of ['draco_decoder.js', 'draco_decoder.wasm', 'draco_wasm_wrappe
 await copyFile(path.join(root, 'node_modules/three/LICENSE'), path.join(output, 'THREE-LICENSE.txt'));
 await copyFile(path.join(root, 'desktop/licenses/DRACO-LICENSE.txt'), path.join(output, 'DRACO-LICENSE.txt'));
 await copyFile(path.join(source, '../README.md'), path.join(output, 'DRACO-README.md'));
+// copyPublicDir is disabled because workspace/ contains private project files.
+if (process.argv.includes('--dist')) await copyFile(path.join(root,'public/assets/dev-space.png'),path.join(root,'dist/assets/dev-space.png'));

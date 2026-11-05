@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T18:47:55.207492+00:00",
+  "generatedAt": "2026-11-05T19:52:14.487265+00:00",
   "title": "Design System: Dev Space",
   "extensions": {
     "colorMeta": {
@@ -151,7 +151,7 @@
   },
   "components": [
     {
-      "name": "????????",
+      "name": "Primary button",
       "kind": "button",
       "refersTo": "button-primary",
       "description": "??????? primary-?????? ????? ????????.",
@@ -159,7 +159,7 @@
       "css": ".ds-preview-primary{font:13px/1.5 var(--font-body);display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:var(--ds-text);color:#111215;font-weight:550;border:1px solid transparent;}.ds-preview-primary:hover{background:#fff}.ds-preview-primary:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-primary:disabled{opacity:.45;cursor:default}"
     },
     {
-      "name": "?????????????",
+      "name": "Secondary button",
       "kind": "button",
       "refersTo": "button-secondary",
       "description": "??????? secondary-?????? ????? ????????.",
@@ -167,7 +167,7 @@
       "css": ".ds-preview-secondary{font:13px/1.5 var(--font-body);display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:28px;padding:6px 9px;border-radius:5px;box-shadow:none;cursor:pointer;background:none;color:var(--ds-text);border:1px solid var(--ds-input);}.ds-preview-secondary:hover{background:var(--ds-hover)}.ds-preview-secondary:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-secondary:disabled{opacity:.45;cursor:default}"
     },
     {
-      "name": "???????",
+      "name": "Ghost button",
       "kind": "button",
       "refersTo": "button-ghost",
       "description": "??????? ghost-?????? ????? ????????.",
@@ -229,17 +229,42 @@
       "description": "Files, Skills and MCP share Graphite tokens in a full-height drawer. Its left-edge divider supports pointer drag, arrow keys and Home. Width is saved and constrained to the viewport.",
       "html": "<nav class=\"ds-preview-tools-tabs\" role=\"tablist\" aria-label=\"Tools\"><button role=\"tab\" aria-selected=\"true\" tabindex=\"0\">Files</button><button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Skills</button><button role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">MCP</button></nav>",
       "css": ".ds-preview-tools-tabs{display:flex;align-items:center;gap:4px;padding:8px 10px;flex-shrink:0;border-bottom:1px solid var(--ds-border);background:var(--ds-surface);font:12px/1.5 var(--font-body)}.ds-preview-tools-tabs button{flex:1;font:inherit;min-height:28px;border:0;border-radius:5px;padding:7px 8px;background:none;color:var(--ds-muted);cursor:pointer}.ds-preview-tools-tabs button:hover{background:var(--ds-hover)}.ds-preview-tools-tabs button[aria-selected=true]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-tools-tabs button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
+    },
+    {
+      "name": "Live collection preview",
+      "kind": "card",
+      "refersTo": "collection-preview",
+      "description": "Живое превью коллекции ведёт к записи в полной теме; отдельная кнопка закрепляет порядок.",
+      "html": "<article class=\"ds-preview-collection\"><button class=\"ds-preview-collection-open\" aria-label=\"Открыть: Идея маршрута\"><strong>Идея маршрута</strong><p>Материал остаётся в теме и доступен для редактирования.</p><span>Заметка</span></button><button class=\"ds-preview-collection-pin\" aria-label=\"Показывать первым: Идея маршрута\" aria-pressed=\"false\">⌖</button></article>",
+      "css": ".ds-preview-collection{font:13px/1.5 var(--font-body);position:relative;min-width:0;max-width:300px;border:1px solid var(--ds-border);border-radius:6px;overflow:hidden;background:var(--ds-surface);color:var(--ds-text)}.ds-preview-collection button{font:inherit;cursor:pointer;min-height:28px;border:0;background:none;color:inherit}.ds-preview-collection-open{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:left;width:100%;height:100%;white-space:normal;padding:0;border-radius:0;gap:0}.ds-preview-collection-open>strong{font-size:12px;line-height:1.5;margin:12px 30px 6px 12px;overflow-wrap:anywhere}.ds-preview-collection-open>p{font-size:11px;line-height:1.7;color:var(--ds-muted);margin:0 12px 12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.ds-preview-collection-open>span{font-size:10px;color:var(--ds-faint);margin:0 12px 12px;margin-top:auto}.ds-preview-collection button:hover{background:var(--ds-hover)}.ds-preview-collection button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-collection button.ds-preview-collection-pin{position:absolute;right:5px;top:5px;min-height:25px;width:25px;padding:5px;border-radius:5px;color:var(--ds-muted);background:var(--ds-surface);border:1px solid var(--ds-border);opacity:0}.ds-preview-collection:hover .ds-preview-collection-pin,.ds-preview-collection:focus-within .ds-preview-collection-pin,.ds-preview-collection-pin[aria-pressed=true]{opacity:1}.ds-preview-collection-pin[aria-pressed=true]{color:var(--ds-accent)}@media(max-width:650px){.ds-preview-collection-pin{opacity:1!important}}"
+    },
+    {
+      "name": "Expanded topic record",
+      "kind": "custom",
+      "refersTo": "topic-record",
+      "description": "Материал раскрывается и редактируется внутри полной темы, сохраняя Graphite-поверхность и общий фокус.",
+      "html": "<article class=\"ds-preview-topic-record ds-preview-topic-target\" tabindex=\"-1\"><div class=\"ds-preview-record-editor\"><header><span>Материал · Тема проекта</span><button aria-label=\"Свернуть материал\">×</button></header><div class=\"ds-preview-record-title\" contenteditable=\"true\" role=\"textbox\" aria-label=\"Название материала\">Идея маршрута</div><div class=\"ds-preview-record-text\" contenteditable=\"true\" role=\"textbox\" aria-label=\"Текст материала\">Запишите мысль и вернитесь к работе над проектом.</div><footer><button>Создать задачу</button><button>В архив</button></footer></div></article>",
+      "css": ".ds-preview-topic-record{font:13px/1.5 var(--font-body);border:1px solid var(--ds-border);border-radius:6px;min-width:0;max-width:620px;background:var(--ds-canvas);color:var(--ds-text);scroll-margin-top:16px;outline:0}.ds-preview-topic-target{border-color:var(--ds-accent)}.ds-preview-record-editor{padding:20px;min-width:0}.ds-preview-record-editor>header{display:flex;align-items:center;justify-content:space-between;color:var(--ds-muted);font-size:11px;margin-bottom:15px}.ds-preview-topic-record button{font:inherit;border:0;border-radius:5px;min-height:28px;padding:6px 9px;background:none;color:inherit;cursor:pointer}.ds-preview-topic-record button:hover{background:var(--ds-hover)}.ds-preview-record-title{font-size:22px;line-height:1.45;font-weight:600;margin-bottom:14px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:3px;outline:none}.ds-preview-record-text{font-size:13px;line-height:1.8;min-height:80px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:3px;outline:none}.ds-preview-record-editor>footer{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:20px;padding-top:15px;border-top:1px solid var(--ds-border);font-size:11px}.ds-preview-record-editor>footer button{border:1px solid var(--ds-border);font-size:11px}.ds-preview-topic-record:focus-visible,.ds-preview-topic-record button:focus-visible,.ds-preview-record-title:focus-visible,.ds-preview-record-text:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}@media(max-width:650px){.ds-preview-record-editor{padding:14px}.ds-preview-record-title{font-size:19px}}"
+    },
+    {
+      "name": "Image gallery record",
+      "kind": "card",
+      "refersTo": "photo-record",
+      "description": "Элемент image-only галереи сохраняет связь с материалом; окно 4:3 показывает картинку целиком.",
+      "html": "<article class=\"ds-preview-photo\" tabindex=\"-1\"><a class=\"ds-preview-photo-link\" href=\"#image-preview\" aria-label=\"Открыть изображение\"><svg viewBox=\"0 0 240 180\" role=\"img\" aria-label=\"Область изображения\"><rect x=\"1\" y=\"1\" width=\"238\" height=\"178\" fill=\"none\" stroke=\"currentColor\"/><path d=\"m40 130 45-45 35 35 25-25 45 35\" fill=\"none\" stroke=\"currentColor\"/></svg></a><footer><input type=\"checkbox\" aria-label=\"Выбрать: Референс мира\"><button title=\"Открыть запись в теме\">Референс мира</button><button aria-label=\"Быстрый просмотр: Референс мира\">⌕</button></footer></article>",
+      "css": ".ds-preview-photo{font:13px/1.5 var(--font-body);min-width:0;max-width:300px;border:1px solid var(--ds-border);border-radius:6px;overflow:hidden;scroll-margin-top:16px;background:var(--ds-surface);color:var(--ds-text)}.ds-preview-photo-link{display:block;background:var(--ds-canvas);color:var(--ds-muted)}.ds-preview-photo-link>svg{width:100%;display:block;aspect-ratio:4/3;object-fit:contain;background:var(--ds-canvas)}.ds-preview-photo>footer{display:flex;align-items:center;gap:6px;padding:7px 9px}.ds-preview-photo input{width:14px;height:14px;accent-color:var(--ds-accent)}.ds-preview-photo button{font:11px var(--font-body);border:0;border-radius:5px;min-height:28px;padding:6px 9px;background:none;color:inherit;cursor:pointer}.ds-preview-photo footer>button:first-of-type{flex:1;min-width:0;text-overflow:ellipsis;overflow:hidden;text-align:left;white-space:nowrap}.ds-preview-photo footer>button:last-of-type{padding:4px}.ds-preview-photo button:hover{background:var(--ds-hover)}.ds-preview-photo:focus-visible,.ds-preview-photo a:focus-visible,.ds-preview-photo button:focus-visible,.ds-preview-photo input:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
     }
   ],
   "narrative": {
     "northStar": "Herdr Graphite",
-    "overview": "Dev Space использует подтверждённое пользователем направление: минималистичную тёмную оболочку Herdr и одну рабочую область проекта с независимой областью агентов. Segoe UI остаётся исходным UI-шрифтом; в реализации 1.0.2 его можно заменить локальным или загруженным шрифтом. Код сохраняет графитовые поверхности, компактные строки навигации, нейтральные контролы и видимые состояния. Знак двух панелей присутствует в заголовке; прежний маскот не является частью новой идентичности.\n\nЭтот документ обновлён по `devspace.css`, `workbench.css`, `page-model-viewer.css`, компонентам рабочей области и настроек, `LocalWhisperSetup.tsx`, `display.ts` и встроенному FilesRail/Chats. Он описывает реализованную систему 1.0.2, а не результаты визуального или пользовательского тестирования: браузерная и нативная UI-проверка в доступной среде не выполнены. Старый файл `design/DESIGN.md` относится к прежнему прототипу. Локальные игровые примеры, изображения и seed-генераторы из игнорируемой `.cache/local-game-demo` не определяют дизайн-систему и не относятся к распространяемому продукту.",
+    "overview": "Dev Space использует подтверждённое пользователем направление: минималистичную тёмную оболочку Herdr и одну рабочую область проекта с независимой областью агентов. Segoe UI остаётся исходным UI-шрифтом; в реализации 1.0.2 его можно заменить локальным или загруженным шрифтом. Код сохраняет графитовые поверхности, компактные строки навигации, нейтральные контролы и видимые состояния. Знак двух панелей присутствует в заголовке; прежний маскот не является частью новой идентичности.\n\nЭтот документ обновлён по `devspace.css`, `workbench.css`, `page-model-viewer.css`, компонентам рабочей области и настроек, `LocalWhisperSetup.tsx`, `display.ts` и встроенному FilesRail/Chats. Дополнение 1.0.4 описывает `PageCollections`, `TopicMaterials`, `navigation.css`, `useMarkdownDraft` и `useSpaceNavigation`, сохраняя исходную Graphite-систему. Документ фиксирует код, а не результаты визуального или пользовательского тестирования: браузерная и нативная UI-проверка в доступной среде не выполнены. Старый файл `design/DESIGN.md` относится к прежнему прототипу. Локальные игровые примеры, изображения и seed-генераторы из игнорируемой `.cache/local-game-demo` не определяют дизайн-систему и не относятся к распространяемому продукту.",
     "keyCharacteristics": [
       "Тональные поверхности и тонкие разделители вместо декоративного свечения.",
       "Одна общая оболочка материалов, документов и живых агентских сессий.",
       "От одной до четырёх независимых панелей агентов с переносимыми вкладками.",
       "Сворачиваемая навигация, сохраняющая значки и состояния агентов.",
       "Короткая UI-типографика и более свободный текст документа.",
+      "Живые превью коллекций ведут к полным темам и отдельной галерее файлов изображений.",
       "Наложенные служебные поверхности появляются по запросу."
     ],
     "rules": [
@@ -265,14 +290,16 @@
       "Do различать выбранную вкладку и активную ячейку, сохраняя видимый получатель клавиатурного ввода.",
       "Do выделять выбранное место тоном, а фокус — видимым контуром.",
       "Do ограничивать ширину документа и разделять прокрутку ленты и постоянного ввода.",
-      "Do сообщать сохранение, ошибку и состояние агента текстом вместе с графическим знаком."
+      "Do сообщать сохранение, ошибку и состояние агента текстом вместе с графическим знаком.",
+      "Do вести превью к полному материалу и сохранять отдельную идентичность записи и вложенного изображения."
     ],
     "donts": [
       "Don't добавлять прежнего маскота, звезду или цветное свечение в новую рабочую оболочку.",
       "Don't превращать каждую строку или абзац в карточку с тенью.",
       "Don't распространять частные унаследованные стили переписки на все новые поверхности.",
       "Don't закреплять пользовательские шрифты, аппаратную конфигурацию или локальные демонстрационные материалы как обязательную часть продукта.",
-      "Don't считать статическое описание кода подтверждением браузерной, нативной или мобильной проверки."
+      "Don't считать статическое описание кода подтверждением браузерной, нативной или мобильной проверки.",
+      "Don't распространять лимит восьми превью главной на полную тему или обрезать изображения фотогалереи по правилам обложки."
     ]
   }
 }

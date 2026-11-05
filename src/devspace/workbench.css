@@ -56,11 +56,11 @@
 .ds-appearance .ds-appearance-error{color:var(--ds-error)}
 
 .dev-space .ds-tools-overlay{position:fixed;right:8px;top:38px;bottom:8px;width:min(520px,calc(100vw - 64px));z-index:70;display:flex;flex-direction:column;background:var(--ds-surface);border:1px solid var(--ds-border);border-radius:8px;overflow:hidden;box-shadow:-10px 5px 30px #0004}
-.ds-tools-overlay .tools-embedded{display:flex;flex-direction:column;width:100%;height:100%;min-height:0;min-width:0;background:var(--ds-surface);color:var(--ds-text);font:12px/1.5 var(--font-body)}
+.ds-tools-overlay .tools-embedded{display:flex;flex-direction:column;width:100%;height:100%;min-height:0;min-width:0;z-index:0;background:var(--ds-surface);color:var(--ds-text);font:12px/1.5 var(--font-body)}
 .ds-tools-resizer{position:absolute;left:0;top:0;bottom:0;width:8px;z-index:5;cursor:col-resize;touch-action:none;outline-offset:-2px}
-.ds-tools-resizer::after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent}
+.ds-tools-resizer::after{content:'';position:absolute;left:2px;top:calc(50% - 16px);height:32px;width:2px;border-radius:2px;background:var(--ds-input)}
 .ds-tools-resizer:hover::after,.ds-tools-resizer:focus-visible::after{background:var(--ds-accent)}
-.dev-space .ds-tools-overlay{--bg:var(--ds-chrome);--bg-deep:var(--ds-canvas);--surface:var(--ds-surface);--surface-solid:var(--ds-surface);--text:var(--ds-text);--text-bright:var(--ds-text);--text-dim:var(--ds-muted);--text-muted:var(--ds-faint);--pink:var(--ds-accent);--purple:var(--ds-accent);--red:var(--ds-error);--green:var(--ds-good);--amber:var(--ds-warning);color-scheme:dark}
+.dev-space .ds-tools-overlay{--bg:var(--ds-chrome);--bg-deep:var(--ds-canvas);--surface:var(--ds-surface);--surface-solid:var(--ds-surface);--surface-1:var(--ds-canvas);--surface-2:var(--ds-raised);--hairline:var(--ds-border);--hairline-strong:var(--ds-input);--text:var(--ds-text);--text-bright:var(--ds-text);--text-dim:var(--ds-muted);--text-muted:var(--ds-faint);--pink:var(--ds-accent);--pink-dim:var(--ds-selection);--pink-bright:var(--ds-text);--purple:var(--ds-accent);--red:var(--ds-error);--green:var(--ds-good);--amber:var(--ds-warning);--on-accent:var(--ds-chrome);--shadow-1:none;--shadow-2:none;color-scheme:dark}
 .ds-tools-overlay .files-panel>header{background:var(--ds-surface);border-bottom:1px solid var(--ds-border);margin-bottom:12px}
 .ds-tools-overlay .file-row:hover,.ds-tools-overlay .file-reveal:hover{background:var(--ds-hover)}
 .ds-tools-overlay .file-row.selected,.ds-tools-overlay .file-row[aria-selected=true]{background:var(--ds-selection);color:var(--ds-text)}

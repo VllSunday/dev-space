@@ -1,0 +1,56 @@
+// Fixture-only browser regression. Never opens an agent process or real project.
+import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { expect } from '@playwright/test';
+import { createService } from '../desktop/service/server.mjs';
+import { desktopAuth, launchBrowser } from '../desktop/service/test/browser.mjs';
+const repo=await mkdtemp(path.join(os.tmpdir(),'devspace-wiki-ui-'));await mkdir(path.join(repo,'workspace/devspace/assets'),{recursive:true});
+const project={id:'fixture',name:'Project',path:repo,homePageId:'home',topics:[{id:'locations',name:'Локации'},{id:'photos',name:'Фото'}]};
+const materials=Array.from({length:12},(_,i)=>({id:'loc-'+(i+1),projectId:'fixture',topicId:'locations',title:'Location '+(i+1),text:'Description of the location. '.repeat(8),created:`2026-10-${String(i+1).padStart(2,'0')}T00:00:00Z`,updated:'2026-11-01T00:00:00Z',kind:'note',files:[],archived:false}));
+const image=await readFile('public/assets/dev-space.png');
+for(let i=0;i<4;i++)await writeFile(path.join(repo,'workspace/devspace/assets/photo-'+i+'.png'),image);
+for(let i=0;i<3;i++)materials.push({id:'photo-'+i,projectId:'fixture',topicId:'photos',title:'Photo material '+i,text:'Image reference',created:'2026-10-20T00:00:00Z',updated:'2026-10-20T00:00:00Z',kind:'image',archived:false,files:(i===0?[0,3]:[i]).map(n=>({path:`workspace/devspace/assets/photo-${n}.png`,name:`Photo ${n}.png`,size:image.length,image:true}))});
+materials.push({...materials.at(-1),id:'shared-photo',title:'Shared attachment',files:[materials.at(-1).files[0]]});
+const pageData={id:'home',projectId:'fixture',topicId:'unfiled',title:'Project Wiki',layout:'wiki',revision:0,sourceIds:[],blocks:[{id:'intro',type:'text',text:'Project overview'},{id:'body',type:'text',text:'Documentation remains editable.'}],collections:[{topicId:'locations',view:'list',pinnedIds:['loc-1']},{topicId:'photos',view:'gallery',pinnedIds:[]}]};
+await writeFile(path.join(repo,'workspace/devspace/space.json'),JSON.stringify({schemaVersion:1,revision:0,projects:[project],materials,pages:[pageData],tasks:[]}));
+const service=await createService({repo,uiDir:path.resolve('dist'),mcpOptions:{home:repo,env:{}}});
+for(const id of ['agent-a','agent-b'])service.sessions.items.set(id,service.sessions.make({id,agent:'shell',name:id,cwd:repo,open:true,status:'stopped',createdAt:new Date().toISOString(),cols:80,rows:24}));
+let browser;
+try{
+ browser=await launchBrowser();const context=await browser.newContext({viewport:{width:1500,height:900}});await desktopAuth(context,service.urls.workspace,'ru');
+ const page=await context.newPage();await page.goto(service.urls.workspace);await expect(page.locator('.ds-wiki')).toBeVisible();
+ await page.keyboard.press('Control+j');await page.keyboard.press('Control+Shift+o');await expect(page.locator('.agent-cell')).toHaveCount(2);await page.locator('.agent-cell').evaluateAll(cells=>cells.forEach((cell,i)=>cell.dataset.lifeToken='pane-'+i));
+ await expect(page.locator('[data-collection-topic=locations] .ds-collection-card')).toHaveCount(8);
+ await page.locator('.ds-wiki nav').getByRole('button',{name:'Локации',exact:true}).click();await expect(page.locator('.ds-content-heading h1')).toHaveText('Локации');await expect(page.locator('.ds-topic-record')).toHaveCount(12);
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.locator('.ds-wiki')).toBeVisible();
+ await page.getByRole('button',{name:'Открыть: Location 1',exact:true}).click();await expect(page.locator('.ds-topic-record.target')).toHaveAttribute('data-material-id','loc-1');
+ await expect(page.getByRole('textbox',{name:'Текст материала',exact:true})).toBeVisible();await expect(page.locator('.ds-dialog[aria-label="Материал"]')).toHaveCount(0);
+ expect(await page.locator('.ds-material-scroll').evaluate(el=>el.scrollTop)).toBeGreaterThan(300);
+ await page.getByRole('textbox',{name:'Текст материала',exact:true}).fill('Updated location text');await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.locator('.ds-wiki')).toBeVisible();
+ await expect.poll(async()=>(await (await fetch(service.origin+'/api/devspace',{headers:{Authorization:`Bearer ${service.token}`}})).json()).materials.find(m=>m.id==='loc-1').text).toBe('Updated location text');
+ await page.locator('.ds-wiki nav').getByRole('button',{name:'Галерея',exact:true}).click();await expect(page.locator('.ds-photo-record')).toHaveCount(5);await expect(page.locator('.ds-record-summary')).toHaveCount(0);
+ await page.locator('.ds-photo-record').first().locator('a').click();await expect(page.locator('.mak-lightbox[open]')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('.mak-lightbox')).toHaveCount(0);
+ await page.getByRole('button',{name:'Закрепить на главной',exact:true}).click();await expect(page.getByRole('button',{name:'На главной',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('.agent-cell[data-life-token]')).toHaveCount(2);
+ await page.reload();await expect(page.getByRole('button',{name:'Назад',exact:true})).toBeEnabled();
+ await page.locator('.ds-location').getByRole('button',{name:'Project',exact:true}).click();await expect(page.locator('[data-collection-topic=all][data-collection-view=gallery]')).toBeVisible();
+ await page.screenshot({path:'.cache/wiki-navigation-desktop.png'});
+ await page.getByRole('button',{name:'Markdown',exact:true}).click();await page.getByRole('textbox',{name:'Markdown страницы',exact:true}).fill('Draft kept while navigating');
+ await page.goBack();await expect(page.locator('.ds-photo-record')).toHaveCount(5);await page.goForward();await expect(page.getByRole('textbox',{name:'Markdown страницы',exact:true})).toHaveValue('Draft kept while navigating');
+ await page.getByRole('button',{name:'Wiki',exact:true}).click();
+ if(await page.locator('.ds-agent-pane').isVisible())await page.getByRole('button',{name:'Свернуть область агентов',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});await expect(page.locator('.ds-wiki')).toBeVisible();await page.screenshot({path:'.cache/wiki-navigation-mobile.png'});
+ // Hold an old instance's save until the page is reopened and a newer draft exists.
+ await page.setViewportSize({width:1500,height:900});await page.getByRole('button',{name:'Markdown',exact:true}).click();
+ let releaseSave,held=false;const waitToSave=new Promise(resolve=>releaseSave=resolve);
+ await page.route('**/api/devspace',async route=>{const data=route.request().method()==='POST'?route.request().postDataJSON():null;if(data?.action==='update-page'&&data.blocks?.some(b=>b.text==='Paused older save')){held=true;await waitToSave}await route.continue()});
+ await page.getByRole('textbox',{name:'Markdown страницы',exact:true}).fill('Paused older save');
+ await page.locator('.ds-navigation').getByRole('button',{name:'Локации',exact:true}).click();await expect.poll(()=>held).toBe(true);
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('textbox',{name:'Markdown страницы',exact:true})).toBeVisible();
+ await page.getByRole('textbox',{name:'Markdown страницы',exact:true}).fill('Newer draft must survive');
+ const storedDraft=async()=>await(await fetch(service.origin+'/api/devspace/drafts?key='+encodeURIComponent('page:home:markdown'),{headers:{Authorization:`Bearer ${service.token}`}})).json();
+ await expect.poll(async()=>(await storedDraft()).text).toBe('Newer draft must survive');
+ releaseSave();await page.waitForTimeout(500);expect((await storedDraft()).text).toBe('Newer draft must survive');expect((await storedDraft()).cleared).not.toBe(true);
+ console.log('PASS: 8 previews, topic navigation, record targeting, inline editing, image-only gallery, lightbox, home pinning and Markdown recovery');
+}finally{await browser?.close();await service.close()}

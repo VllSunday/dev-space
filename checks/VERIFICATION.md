@@ -1,5 +1,40 @@
 # Verification record
 
+## Version 1.0.4
+
+The production TypeScript/Vite build passed with 403 modules. The offline Windows
+Rust release build and NSIS packaging passed. The focused unit suite ran in one
+Node process because this agent environment rejects child-process test isolation:
+47 passed, three skipped, zero failed (50 total). The skips cover optional local
+Whisper fixtures and the process-based release buffer regression.
+
+The user executed scripts/check-release-ui.mjs in a normal Windows session.
+All four browser checks passed: full-window layout, agent panes/fonts/tool drawer,
+GLB viewing and Wiki navigation. The recorded UI index SHA-256 for that run is
+667f0053cb6d1ad3c9c37d749a15bd692c9081363460ae94e11b1d5f5ebe1aa1.
+The checks exercised pointer widening AND narrowing, saved drawer size, Graphite
+aliases, font upload, 3D rendering, eight home previews, target-record scrolling,
+inline edits, image-only galleries, history after reload and a delayed Markdown
+save across unmount/remount with a newer draft.
+
+This run caught history being cleared by bootstrap credential removal and a test
+selector expecting textbox rather than the actual font combobox. Both were fixed
+before the passing run. The source-only finish reviewer also identified a stale
+Markdown tombstone, history reinitialization and duplicate image keys; all three
+fixes are included. The detector was not rerun after the bounded review.
+
+A single batched screenshot review found that settings lacked explicit dialog
+centering and the fixture mobile capture had reopened agents rather than showing
+Wiki. Dialog positioning and the capture were corrected. The production build
+also now copies the public app icon explicitly, without copying private workspace
+files. These final visual/capture changes passed TypeScript/Vite and packaging;
+a second browser confirmation has not been run yet. Do not treat the earlier
+passing UI hash as proof of this later render.
+
+Current publication remains a separate step: Linux/macOS packages and a GitHub
+Release are only complete after native Actions jobs and asset verification pass.
+Microphone capture and actual transcription were not exercised in this pass.
+
 ## Version 1.0.3
 
 The production TypeScript/Vite build passed with 397 modules. The focused

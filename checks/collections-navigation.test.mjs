@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { DevSpace } from '../desktop/service/devspace.mjs';
+import { collectionMaterials, pageCollections } from '../src/devspace/model.ts';
+import { emptyRoute, parseRoute, routeHash } from '../src/devspace/spaceRoute.ts';
+
+test('collection previews use creation order, preserve manual pins and never include archived or foreign data',()=>{
+ const materials=Array.from({length:12},(_,i)=>({id:'m-'+i,projectId:'p',topicId:'locations',created:String(i).padStart(3,'0'),updated:'999',archived:false,files:i%2?[{image:true}]:[]}));
+ materials.push({...materials[10],id:'other',projectId:'other'},{...materials[11],id:'archived',archived:true});
+ const selected=collectionMaterials(materials,'p',{topicId:'locations',view:'list',pinnedIds:['m-0']},8);
+ assert.deepEqual(selected.map(m=>m.id),['m-0','m-11','m-10','m-9','m-8','m-7','m-6','m-5']);
+ assert.equal(materials.length,14);
+ assert.equal(collectionMaterials(materials,'p',{topicId:'all',view:'gallery'}).length,6);
+ const project={topics:[{id:'locations',name:'Locations'}]};
+ assert.equal(pageCollections({layout:'wiki'},project).length,1);
+ assert.deepEqual(pageCollections({layout:'wiki',collections:[]},project),[]);
+ assert.deepEqual(pageCollections({layout:'document'},project),[]);
+});
+test('routes round trip target records and gallery context without becoming external file URLs',()=>{
+ const route={...emptyRoute,projectId:'game-1',topicId:'места / мир',view:'materials',gallery:true,materialId:'record-1',filePath:'workspace/devspace/assets/file.png'};
+ assert.deepEqual(parseRoute(routeHash(route)),route);
+ const doc={...emptyRoute,projectId:'game-1',view:'page',pageId:'wiki'};
+ assert.deepEqual(parseRoute(routeHash(doc)),doc);
+ for(const hash of ['https://example.test','#/legacy-card','#/space/%invalid/materials/all','#/space/p/unknown/all','#/space/p/materials/all?file=../../secret'])assert.equal(parseRoute(hash),null);
+});
+test('live collections persist references, bound previews, reject cross-project pins and survive undo',async()=>{
+ const repo=await mkdtemp(path.join(os.tmpdir(),'devspace-collections-'));await mkdir(path.join(repo,'workspace'));
+ const store=await new DevSpace(repo).init();
+ const op=async value=>store.mutate({...value,baseRevision:(await store.read()).revision});
+ const projectId=(await store.read()).projects[0].id;
+ let state=await op({action:'create-topic',projectId,name:'Locations'}),topicId=state.projects[0].topics[0].id;
+ state=await op({action:'create-page',projectId,title:'Wiki',layout:'wiki'});const pageId=state.pages[0].id;
+ assert.deepEqual(state.pages[0].collections,[]);
+ for(let i=0;i<10;i++)await op({action:'create-material',projectId,topicId,text:'Location '+i});
+ await op({action:'collection',id:pageId,topicId,view:'list',enabled:true});
+ const records=(await store.read()).materials;
+ for(const record of records.slice(0,8))await op({action:'collection',id:pageId,topicId,view:'list',pinId:record.id,pinned:true});
+ await assert.rejects(op({action:'collection',id:pageId,topicId,view:'list',pinId:records[8].id,pinned:true}),/8/);
+ await assert.rejects(op({action:'collection',id:pageId,topicId:'missing',view:'list',enabled:true}),/Коллекция/);
+ await assert.rejects(op({action:'collection',id:pageId,topicId,view:'gallery',pinId:records[0].id,pinned:true}),/Материал/);
+ await assert.rejects(op({action:'collection',id:pageId,topicId,view:'list',enabled:false,pinId:records[0].id,pinned:true}),/действие/);
+ state=await op({action:'create-project',name:'Other',path:repo});const otherId=state.projects.at(-1).id;
+ state=await op({action:'create-material',projectId:otherId,topicId:'unfiled',text:'Foreign'});const foreign=state.materials[0].id;
+ await assert.rejects(op({action:'collection',id:pageId,topicId:'all',view:'list',pinId:foreign,pinned:true}),/Материал/);
+ await op({action:'update-material',id:records[0].id,archived:true});
+ await op({action:'collection',id:pageId,topicId,view:'list',pinId:records[8].id,pinned:true});
+ state=await op({action:'delete-topic',projectId,id:topicId});assert.equal(state.pages[0].collections.length,0);
+ state=await op({action:'undo'});assert.equal(state.pages[0].collections.length,1);assert.equal(state.materials.filter(m=>m.projectId===projectId).length,10);
+ const reread=await new DevSpace(repo).init();assert.deepEqual((await reread.read()).pages[0].collections,state.pages[0].collections);
+});

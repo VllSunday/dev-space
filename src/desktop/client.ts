@@ -14,7 +14,7 @@ delete native.__MRMAK_BOOTSTRAP_TOKEN__
 sessionStorage.removeItem('mrmak.token')
 if (isDesktop && token) {
   params.delete('token')
-  history.replaceState(null, '', `${location.pathname}?${params}${location.hash}`)
+  history.replaceState(history.state, '', `${location.pathname}?${params}${location.hash}`)
 }
 const listeners = new Set<() => void>()
 const events = new Set<(event: ServiceEvent) => void>()
