@@ -1,5 +1,15 @@
 # Verification record
 
+## Version 1.0.7 — release preflight after local spaces
+
+The local Windows build passed. Native/service tests completed with 275 passes,
+8 skips and no failures. Browser checks passed for layout (28 cases), agent
+panes, the model viewer, Wiki navigation and the first-run template. The pane
+fixture now keeps an already-open workbench open and returns from its expanded
+view before opening tools. The template fixture closes agents before checking
+the mobile document view. All existing assertions remain in place. These
+results do not verify native installers or the other platform packages.
+
 ## Version 1.0.7 — Windows CI fixture
 
 The v1.0.6 native test suites passed on all four runners. Linux and macOS arm64

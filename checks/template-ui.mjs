@@ -28,6 +28,7 @@ try{
  const after=JSON.parse(await readFile(path.join(repo,'workspace/devspace/space.json'),'utf8'));
  expect(after.projects).toHaveLength(3);expect(after.pages.filter(p=>p.projectId===first.projects[1].id)).toEqual(first.pages);expect(service.sessions.items.size).toBe(0);
  await page.screenshot({path:'.cache/template-desktop.png'});
+  if(await page.locator('.ds-agent-pane').isVisible())await page.getByRole('button',{name:'Свернуть область агентов',exact:true}).click();
  await page.setViewportSize({width:390,height:844});await expect(page.locator('.ds-wiki')).toBeVisible();await page.screenshot({path:'.cache/template-mobile.png'});
  console.log('PASS: first-run example, independent copy, Wiki navigation, bundled GLB, project dialog and no agent launch');
 }finally{await browser?.close();await service.close()}

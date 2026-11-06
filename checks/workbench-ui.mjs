@@ -19,7 +19,7 @@ try {
   const page = await context.newPage(); await page.goto(service.urls.workspace);
   await expect(page.locator('.dev-space')).toBeVisible();
   await expect.poll(()=>page.locator('.ds-titlebar>img').evaluate(image=>image.naturalWidth)).toBeGreaterThan(0);
-  await page.keyboard.press('Control+j');
+  if (!await page.locator('.ds-agent-pane').count()) await page.keyboard.press('Control+j');
   await expect(page.locator('.agent-cell')).toHaveCount(1);
   await expect(page.locator('.chat-tab')).toHaveCount(4);
   await page.getByRole('button', { name: 'Агенты на всю рабочую область', exact: true }).click();
@@ -60,6 +60,7 @@ try {
   await page.getByRole('button', { name: 'Раскладка панелей', exact: true }).click();
   await page.getByRole('button', { name: 'Раскладка: 2 панели', exact: true }).click(); await expect(page.locator('.agent-cell')).toHaveCount(2);
   await page.waitForTimeout(700); await page.reload(); await expect(page.locator('.agent-cell')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Вернуть материалы рядом', exact: true }).click();
   await page.getByRole('button', { name: 'Файлы, навыки и MCP', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Файлы', exact: true })).toBeVisible();
   const tools = page.locator('.ds-tools-overlay'), toolsHandle = page.getByRole('separator', { name: 'Ширина панели инструментов', exact: true });
