@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T19:52:14.487265+00:00",
+  "generatedAt": "2026-11-06T16:35:17.496037Z",
   "title": "Design System: Dev Space",
   "extensions": {
     "colorMeta": {
@@ -71,6 +71,10 @@
       "raised": {
         "role": "neutral",
         "displayName": "?????? ????????? ??????"
+      },
+      "editor-surface": {
+        "role": "neutral",
+        "displayName": "Поверхность редактирования потока"
       }
     },
     "typographyMeta": {
@@ -89,6 +93,14 @@
       "terminal": {
         "displayName": "????????????? ????????",
         "purpose": "--font-mono ? family xterm; ??????? Cascadia Code, ????? Consolas, SF Mono ? monospace. ?????? 10?24px, ????? 13px; ????? native zoom 75?175% ????????."
+      },
+      "composition-title": {
+        "displayName": "Заголовок композиции",
+        "purpose": "30px/1.3, 600; 25px до 650px. Не заменяет заголовки всех поверхностей."
+      },
+      "prose": {
+        "displayName": "Проза Wiki",
+        "purpose": "14px/1.85 в пределах 78ch; 13px до 650px."
       }
     },
     "shadows": [
@@ -108,11 +120,6 @@
         "purpose": "?????????? ?????????????? ??????????? ?????/??????/MCP."
       },
       {
-        "name": "agent-overlay",
-        "value": "12px 0 45px #0006",
-        "purpose": "????????? ??????? ?? 900px."
-      },
-      {
         "name": "embedded-dialog",
         "value": "0 14px 60px #0007",
         "purpose": "??????????????? ???????????? Chats-????????."
@@ -121,6 +128,16 @@
         "name": "workbench-menu",
         "value": "0 8px 24px #0008",
         "purpose": "???? ?????????, ???????? ? ??????? ????????? ???????."
+      },
+      {
+        "name": "block-menu-icon-picker",
+        "value": "0 12px 25px #0006",
+        "purpose": "Портальное меню блока и выбор значка темы."
+      },
+      {
+        "name": "flow-insertion",
+        "value": "0 12px 22px #0005",
+        "purpose": "Типы вставляемых блоков и тем в выбранной позиции потока."
       }
     ],
     "motion": [
@@ -141,13 +158,44 @@
       },
       {
         "name": "agent-overlay-max",
-        "value": "900px"
+        "value": "1150px",
+        "purpose": "Open agents fill the work area beside the local spaces rail; project area is temporarily hidden."
       },
       {
         "name": "narrow-max",
         "value": "650px"
       }
-    ]
+    ],
+    "agentPanelPolish": {
+      "source": "src/devspace/agent-panels.css",
+      "sidebarSplit": "equal halves above settings footer; independent scroll",
+      "paneHeader": "two rows below 520px; icon labels below 340px",
+      "terminalSurface": "--ds-canvas via terminalSurfaceTheme; preserve ANSI output",
+      "composer": "resize on content and panel changes; reconnect above content",
+      "scrollbars": "gray thumb, panel track, no native arrows; retain xterm overlay",
+      "validation": "21 targeted tests, TypeScript and production build; browser launch blocked by spawn EPERM",
+      "mainSurfaces": {
+        "navigation": "#101114",
+        "contentAndDocumentToolbar": "#131518"
+      },
+      "paneDividers": "1px visible lines on both axes; retain 7px resize target",
+      "moreIcon": "three solid dots; visible at rest",
+      "readingVoiceControl": "32px control with explicit font/padding; wraps on narrow panes"
+    },
+    "shellPaletteAndSkills": {
+      "paletteScope": "body.devspace-shell; includes portalled controls",
+      "focus": "no composer inner outline or focus glow; other controls retain blue-gray keyboard focus",
+      "skillScopes": "personal and selected document project; Claude/Codex roots and plugin caches",
+      "missingFolders": "read-only empty state; no directory creation during discovery",
+      "checks": "TypeScript, targeted ESLint error check and 17 service tests; browser blocked by spawn EPERM"
+    },
+    "materialEditing": {
+      "component": "src/devspace/MaterialAttachments.tsx",
+      "inputs": "file picker, clipboard files, browser/native drops",
+      "persistence": "atomic attachment patches; pending draft references; no asset deletion",
+      "deletion": "per-row, expanded record, quick view and bulk; revision-guarded toast undo",
+      "checks": "22 related tests, TypeScript, targeted ESLint; browser blocked by spawn EPERM"
+    }
   },
   "components": [
     {
@@ -186,9 +234,9 @@
       "name": "Navigation row",
       "kind": "nav",
       "refersTo": "navigation-item",
-      "description": "?????????? ????????? ????? ? sidebar.",
-      "html": "<button class=\"ds-preview-nav\" aria-current=\"page\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7V5h6l2 2h10v13H3Z\"/></svg><span>??? ? ???????</span></button>",
-      "css": ".ds-preview-nav{font:13px/1.5 var(--font-body);display:flex;align-items:center;justify-content:flex-start;gap:7px;min-height:33px;padding:6px 8px;border:0;border-radius:5px;background:none;color:#c9cbd0;font-size:12px;text-align:left;cursor:pointer}.ds-preview-nav svg{color:var(--ds-muted)}.ds-preview-nav:hover{background:var(--ds-hover)}.ds-preview-nav[aria-current=page]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-nav:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
+      "description": "Смысловая иконка темы и тонально выбранная строка; общий контурный SVG вместо произвольного набора.",
+      "html": "<button class=\"ds-preview-nav\" aria-current=\"page\"><svg class=\"ds-preview-outline\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M3 7h7l2 2h9v11H3z M3 7V4h6l3 3\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg><span>Мир и локации</span></button>",
+      "css": ".ds-preview-nav{font:13px/1.5 var(--font-body);display:flex;align-items:center;justify-content:flex-start;gap:7px;min-height:33px;padding:6px 8px;border:0;border-radius:5px;background:none;color:#c9cbd0;font-size:12px;text-align:left;cursor:pointer}.ds-preview-nav svg{color:var(--ds-muted)}.ds-preview-nav:hover{background:var(--ds-hover)}.ds-preview-nav[aria-current=page]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-nav:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-outline{flex-shrink:0;vertical-align:middle;overflow:visible}"
     },
     {
       "name": "Source chip",
@@ -218,9 +266,9 @@
       "name": "Agent workbench cell",
       "kind": "custom",
       "refersTo": "agent-cell",
-      "description": "?????? ?????????? ????????? ???????. ????????? ??????? ?????????? ????????? ?????????? ?????; ??????? ????? ????????? ????????? ?????????.",
-      "html": "<section class=\"ds-preview-agent-cell ds-preview-agent-active\" aria-label=\"?????? ??????? 1\"><header><span>?????? 1</span><button aria-label=\"???????? ?????? 1\">?</button></header><nav aria-label=\"??????? ??????\"><button aria-pressed=\"true\">????? ???????</button><button aria-pressed=\"false\">????????</button></nav><div class=\"ds-preview-agent-content\">??????? ??????? ?????????</div></section>",
-      "css": ".ds-preview-agent-cell{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border:3px solid var(--ds-chrome);border-radius:7px;background:var(--ds-canvas);color:var(--ds-text);font:12px/1.5 var(--font-body);outline:0}.ds-preview-agent-cell:after{content:\"\";position:absolute;inset:0;border:1px solid var(--ds-border);border-radius:4px;pointer-events:none}.ds-preview-agent-active:after{border-color:var(--ds-accent)}.ds-preview-agent-cell>header{height:24px;min-height:24px;display:flex;align-items:center;gap:4px;padding:0 6px;font-size:10px;color:var(--ds-faint);background:var(--ds-chrome)}.ds-preview-agent-cell>header>span{flex:1}.ds-preview-agent-cell button{font:11px var(--font-body);color:var(--ds-muted);border:0;border-radius:5px;background:none;padding:7px;cursor:pointer}.ds-preview-agent-cell>header button{height:22px;min-height:22px;width:24px;padding:3px}.ds-preview-agent-cell nav{display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto;overflow-y:hidden;min-height:37px;background:var(--ds-chrome);padding:4px 6px}.ds-preview-agent-cell button:hover{background:var(--ds-hover)}.ds-preview-agent-cell button[aria-pressed=true]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-agent-cell button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-agent-content{padding:7px 5px 6px 8px;color:var(--ds-muted);background:var(--ds-canvas)}"
+      "description": "Одна граница деления, вкладки и inline-действия; активная вкладка имеет тонкую нижнюю линию вместо вложенной рамки ячейки.",
+      "html": "<section class=\"ds-preview-agent-cell ds-preview-agent-active\" aria-label=\"Панель агентов\"><nav aria-label=\"Вкладки панели\"><button class=\"ds-preview-agent-tab\" aria-pressed=\"true\">Агент проекта</button><button class=\"ds-preview-agent-tab\" aria-pressed=\"false\">Терминал</button><span></span><button aria-label=\"Развернуть панель\"><svg class=\"ds-preview-outline\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M3 4h18v15H3ZM3 8h18M8 8v11\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></button><button aria-label=\"Действия панели\">⋯</button></nav><div class=\"ds-preview-agent-content\">Рабочая область терминала</div></section>",
+      "css": ".ds-preview-agent-cell{font:13px/1.5 var(--font-body);position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border:0;border-radius:0;background:var(--ds-canvas);color:var(--ds-text);outline:0}.ds-preview-agent-cell nav{display:flex;align-items:center;flex-wrap:nowrap;gap:2px;overflow-x:auto;overflow-y:hidden;min-height:37px;background:var(--ds-canvas);padding:4px 6px}.ds-preview-agent-cell nav>span{flex:1}.ds-preview-agent-cell button{font:11px var(--font-body);color:var(--ds-muted);border:0;border-radius:4px;background:none;padding:4px;min-width:24px;cursor:pointer}.ds-preview-agent-cell .ds-preview-agent-tab{padding:7px}.ds-preview-agent-cell button:hover{background:var(--ds-hover);color:var(--ds-text)}.ds-preview-agent-cell button[aria-pressed=true]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-agent-active .ds-preview-agent-tab[aria-pressed=true]{box-shadow:inset 0 -1px var(--ds-accent)}.ds-preview-agent-cell button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-agent-content{padding:10px 12px;color:var(--ds-muted);background:var(--ds-canvas)}.ds-preview-outline{flex-shrink:0;vertical-align:middle;overflow:visible}"
     },
     {
       "name": "Full-height tools tabs",
@@ -231,12 +279,12 @@
       "css": ".ds-preview-tools-tabs{display:flex;align-items:center;gap:4px;padding:8px 10px;flex-shrink:0;border-bottom:1px solid var(--ds-border);background:var(--ds-surface);font:12px/1.5 var(--font-body)}.ds-preview-tools-tabs button{flex:1;font:inherit;min-height:28px;border:0;border-radius:5px;padding:7px 8px;background:none;color:var(--ds-muted);cursor:pointer}.ds-preview-tools-tabs button:hover{background:var(--ds-hover)}.ds-preview-tools-tabs button[aria-selected=true]{background:var(--ds-selection);color:var(--ds-text)}.ds-preview-tools-tabs button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
     },
     {
-      "name": "Live collection preview",
+      "name": "Live collection list preview",
       "kind": "card",
       "refersTo": "collection-preview",
-      "description": "Живое превью коллекции ведёт к записи в полной теме; отдельная кнопка закрепляет порядок.",
-      "html": "<article class=\"ds-preview-collection\"><button class=\"ds-preview-collection-open\" aria-label=\"Открыть: Идея маршрута\"><strong>Идея маршрута</strong><p>Материал остаётся в теме и доступен для редактирования.</p><span>Заметка</span></button><button class=\"ds-preview-collection-pin\" aria-label=\"Показывать первым: Идея маршрута\" aria-pressed=\"false\">⌖</button></article>",
-      "css": ".ds-preview-collection{font:13px/1.5 var(--font-body);position:relative;min-width:0;max-width:300px;border:1px solid var(--ds-border);border-radius:6px;overflow:hidden;background:var(--ds-surface);color:var(--ds-text)}.ds-preview-collection button{font:inherit;cursor:pointer;min-height:28px;border:0;background:none;color:inherit}.ds-preview-collection-open{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;text-align:left;width:100%;height:100%;white-space:normal;padding:0;border-radius:0;gap:0}.ds-preview-collection-open>strong{font-size:12px;line-height:1.5;margin:12px 30px 6px 12px;overflow-wrap:anywhere}.ds-preview-collection-open>p{font-size:11px;line-height:1.7;color:var(--ds-muted);margin:0 12px 12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.ds-preview-collection-open>span{font-size:10px;color:var(--ds-faint);margin:0 12px 12px;margin-top:auto}.ds-preview-collection button:hover{background:var(--ds-hover)}.ds-preview-collection button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-collection button.ds-preview-collection-pin{position:absolute;right:5px;top:5px;min-height:25px;width:25px;padding:5px;border-radius:5px;color:var(--ds-muted);background:var(--ds-surface);border:1px solid var(--ds-border);opacity:0}.ds-preview-collection:hover .ds-preview-collection-pin,.ds-preview-collection:focus-within .ds-preview-collection-pin,.ds-preview-collection-pin[aria-pressed=true]{opacity:1}.ds-preview-collection-pin[aria-pressed=true]{color:var(--ds-accent)}@media(max-width:650px){.ds-preview-collection-pin{opacity:1!important}}"
+      "description": "Список живой коллекции использует разделитель и общий поток без вложенной карточки; виды tiles/gallery задаются отдельно для любой темы.",
+      "html": "<article class=\"ds-preview-collection\"><button class=\"ds-preview-collection-open\" aria-label=\"Открыть: Идея маршрута\"><span class=\"ds-preview-collection-copy\"><strong>Идея маршрута</strong><p>Материал остаётся в теме и доступен для редактирования.</p></span><svg class=\"ds-preview-outline\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"m9 5 7 7-7 7\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></button><button class=\"ds-preview-collection-pin\" aria-label=\"Показывать первым: Идея маршрута\" aria-pressed=\"false\"><svg class=\"ds-preview-outline\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"m8 3 8 0-1 7 4 4H5l4-4ZM12 14v7\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></button></article>",
+      "css": ".ds-preview-collection{font:13px/1.5 var(--font-body);position:relative;min-width:0;max-width:620px;border:0;border-top:1px solid var(--ds-border);border-radius:0;background:none;color:var(--ds-text)}.ds-preview-collection button{font:inherit;cursor:pointer;min-height:28px;border:0;background:none;color:inherit}.ds-preview-collection-open{display:flex;align-items:center;gap:16px;text-align:left;width:100%;white-space:normal;padding:15px 30px 15px 0;border-radius:0}.ds-preview-collection-copy{flex:1;min-width:0}.ds-preview-collection-copy strong{display:block;font-size:13px;font-weight:550}.ds-preview-collection-copy p{font-size:12px;line-height:1.7;color:var(--ds-muted);margin:6px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ds-preview-collection button:hover{background:var(--ds-hover)}.ds-preview-collection button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-collection button.ds-preview-collection-pin{position:absolute;right:0;top:8px;opacity:0;width:25px;min-height:25px;padding:4px;z-index:1;border:0;border-radius:5px;background:var(--ds-surface)}.ds-preview-collection:hover .ds-preview-collection-pin,.ds-preview-collection:focus-within .ds-preview-collection-pin,.ds-preview-collection-pin[aria-pressed=true]{opacity:1}.ds-preview-collection-pin[aria-pressed=true]{color:var(--ds-accent)}@media(max-width:650px){.ds-preview-collection-pin{opacity:1!important}}.ds-preview-outline{flex-shrink:0;vertical-align:middle;overflow:visible}"
     },
     {
       "name": "Expanded topic record",
@@ -253,24 +301,42 @@
       "description": "Элемент image-only галереи сохраняет связь с материалом; окно 4:3 показывает картинку целиком.",
       "html": "<article class=\"ds-preview-photo\" tabindex=\"-1\"><a class=\"ds-preview-photo-link\" href=\"#image-preview\" aria-label=\"Открыть изображение\"><svg viewBox=\"0 0 240 180\" role=\"img\" aria-label=\"Область изображения\"><rect x=\"1\" y=\"1\" width=\"238\" height=\"178\" fill=\"none\" stroke=\"currentColor\"/><path d=\"m40 130 45-45 35 35 25-25 45 35\" fill=\"none\" stroke=\"currentColor\"/></svg></a><footer><input type=\"checkbox\" aria-label=\"Выбрать: Референс мира\"><button title=\"Открыть запись в теме\">Референс мира</button><button aria-label=\"Быстрый просмотр: Референс мира\">⌕</button></footer></article>",
       "css": ".ds-preview-photo{font:13px/1.5 var(--font-body);min-width:0;max-width:300px;border:1px solid var(--ds-border);border-radius:6px;overflow:hidden;scroll-margin-top:16px;background:var(--ds-surface);color:var(--ds-text)}.ds-preview-photo-link{display:block;background:var(--ds-canvas);color:var(--ds-muted)}.ds-preview-photo-link>svg{width:100%;display:block;aspect-ratio:4/3;object-fit:contain;background:var(--ds-canvas)}.ds-preview-photo>footer{display:flex;align-items:center;gap:6px;padding:7px 9px}.ds-preview-photo input{width:14px;height:14px;accent-color:var(--ds-accent)}.ds-preview-photo button{font:11px var(--font-body);border:0;border-radius:5px;min-height:28px;padding:6px 9px;background:none;color:inherit;cursor:pointer}.ds-preview-photo footer>button:first-of-type{flex:1;min-width:0;text-overflow:ellipsis;overflow:hidden;text-align:left;white-space:nowrap}.ds-preview-photo footer>button:last-of-type{padding:4px}.ds-preview-photo button:hover{background:var(--ds-hover)}.ds-preview-photo:focus-visible,.ds-preview-photo a:focus-visible,.ds-preview-photo button:focus-visible,.ds-preview-photo input:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}"
+    },
+    {
+      "name": "Topic icon picker",
+      "kind": "custom",
+      "refersTo": "topic-icon-picker",
+      "description": "Shared outline icon picker with search and Unicode. The + trigger sits beside the topic h1; the chosen icon appears in the heading.",
+      "html": "<section class=\"ds-preview-icon-picker\" role=\"dialog\" aria-label=\"Значок темы\"><header><strong>Значок темы</strong><button aria-label=\"Закрыть выбор значка\">×</button></header><input aria-label=\"Найти значок\" placeholder=\"Найти: код, локация, идея…\"><h3>Проект</h3><div><button aria-label=\"Выбрать: Проект\" aria-pressed=\"true\"><svg class=\"ds-preview-outline\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M3 7h7l2 2h9v11H3z M3 7V4h6l3 3\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></button><button aria-label=\"Выбрать: Заметка\" aria-pressed=\"false\"><svg class=\"ds-preview-outline\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M5 2h10l4 4v16H5z M14 2v5h5 M8 11h8 M8 15h8 M8 19h5\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg></button></div><label>Свой Unicode или эмодзи<input aria-label=\"Свой значок темы\" maxlength=\"32\"></label><footer><button>Убрать значок</button><button>Применить</button></footer></section>",
+      "css": ".ds-preview-icon-picker{font:13px/1.5 var(--font-body);width:min(340px,calc(100vw - 24px));overflow:auto;padding:14px 16px;background:var(--ds-popover);border:1px solid var(--ds-input);border-radius:7px;box-shadow:0 12px 25px #0006;color:var(--ds-text)}.ds-preview-icon-picker header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:13px}.ds-preview-icon-picker button{font:inherit;background:none;border:0;border-radius:4px;color:inherit;cursor:pointer;padding:6px 8px;min-height:30px}.ds-preview-icon-picker button:hover,.ds-preview-icon-picker button[aria-pressed=true]{background:#ffffff0c}.ds-preview-icon-picker button:disabled{opacity:.4}.ds-preview-icon-picker input{display:block;width:100%;min-width:0;background:#191c20;border:1px solid #ffffff24;border-radius:5px;font:12px var(--font-body);padding:9px;color:#eeeeef;box-sizing:border-box}.ds-preview-icon-picker h3{font-size:11px;font-weight:500;color:var(--ds-muted);margin:16px 0 7px}.ds-preview-icon-picker>div{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.ds-preview-icon-picker>div button{display:grid;place-items:center;min-height:39px}.ds-preview-icon-picker label{display:block;color:var(--ds-muted);font-size:11px;margin-top:18px}.ds-preview-icon-picker label input{margin-top:7px}.ds-preview-icon-picker footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}.ds-preview-icon-picker button:focus-visible,.ds-preview-icon-picker input:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}.ds-preview-outline{flex-shrink:0;vertical-align:middle;overflow:visible}"
+    },
+    {
+      "name": "Flow editing node",
+      "kind": "custom",
+      "refersTo": "flow-editor",
+      "description": "Редактируемый узел потока с handle, inline текстом и вставкой в заданной позиции; меню действует на конкретный узел.",
+      "html": "<section class=\"ds-preview-flow-editor\"><button class=\"ds-preview-flow-handle\" aria-label=\"Действия: блок 1\" aria-haspopup=\"menu\" aria-expanded=\"false\">⠿</button><div class=\"ds-preview-flow-text\" contenteditable=\"true\" role=\"textbox\" aria-label=\"Текст блока\">Текст, медиа и разделы можно менять местами.</div></section><div class=\"ds-preview-flow-insertion\"><button aria-label=\"Добавить блок в позицию 2\" aria-expanded=\"false\"><svg class=\"ds-preview-outline\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M12 5v14M5 12h14\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg>Добавить блок</button></div>",
+      "css": ".ds-preview-flow-editor{font:13px/1.5 var(--font-body);position:relative;min-width:0;padding:18px 20px 18px 34px;margin:0;background:#1b1e22;border:1px solid var(--ds-border);border-radius:6px;color:var(--ds-text)}.ds-preview-flow-editor:hover,.ds-preview-flow-editor:focus-within{border-color:var(--ds-input)}.ds-preview-flow-text{padding:6px 8px;min-height:38px;font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:3px;outline:none}.ds-preview-flow-text:focus{outline:1px solid #96b2d780;background:#22262b;outline-offset:2px}.ds-preview-flow-handle{position:absolute;left:4px;top:17px;display:flex;justify-content:center;align-items:center;width:24px;height:28px;min-height:28px;padding:0;color:var(--ds-faint);font-size:18px;border:0;border-radius:5px;background:none;cursor:grab;opacity:.7}.ds-preview-flow-handle:hover,.ds-preview-flow-handle:focus-visible,.ds-preview-flow-handle[aria-expanded=true]{opacity:1;background:var(--ds-hover)}.ds-preview-flow-insertion{font:13px/1.5 var(--font-body);position:relative;display:flex;justify-content:center;align-items:center;min-height:30px}.ds-preview-flow-insertion button{display:flex;align-items:center;gap:7px;font:11px var(--font-body);color:var(--ds-muted);min-height:26px;padding:2px 10px;border:0;border-radius:5px;background:none;cursor:pointer}.ds-preview-flow-insertion:hover button{background:var(--ds-hover)}.ds-preview-flow-handle:focus-visible,.ds-preview-flow-insertion button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;}@media(max-width:650px){.ds-preview-flow-editor{padding:14px 10px 14px 28px}.ds-preview-flow-handle{left:1px;top:13px}}.ds-preview-outline{flex-shrink:0;vertical-align:middle;overflow:visible}"
     }
   ],
   "narrative": {
     "northStar": "Herdr Graphite",
-    "overview": "Dev Space использует подтверждённое пользователем направление: минималистичную тёмную оболочку Herdr и одну рабочую область проекта с независимой областью агентов. Segoe UI остаётся исходным UI-шрифтом; в реализации 1.0.2 его можно заменить локальным или загруженным шрифтом. Код сохраняет графитовые поверхности, компактные строки навигации, нейтральные контролы и видимые состояния. Знак двух панелей присутствует в заголовке; прежний маскот не является частью новой идентичности.\n\nЭтот документ обновлён по `devspace.css`, `workbench.css`, `page-model-viewer.css`, компонентам рабочей области и настроек, `LocalWhisperSetup.tsx`, `display.ts` и встроенному FilesRail/Chats. Дополнение 1.0.4 описывает `PageCollections`, `TopicMaterials`, `navigation.css`, `useMarkdownDraft` и `useSpaceNavigation`, сохраняя исходную Graphite-систему. Документ фиксирует код, а не результаты визуального или пользовательского тестирования: браузерная и нативная UI-проверка в доступной среде не выполнены. Старый файл `design/DESIGN.md` относится к прежнему прототипу. Локальные игровые примеры, изображения и seed-генераторы из игнорируемой `.cache/local-game-demo` не определяют дизайн-систему и не относятся к распространяемому продукту.",
+    "overview": "Dev Space использует подтверждённое пользователем направление Herdr Graphite: локальные спейсы и чаты находятся слева, проектная навигация, Wiki и файлы — справа. Локальный спейс объединяет агентские сессии и их раскладку независимо от выбранного проекта. Segoe UI остаётся исходным UI-шрифтом и может быть заменён локальным или загруженным шрифтом. Код сохраняет графитовые поверхности, компактные строки навигации, нейтральные контролы и видимые состояния. Прежние плоские контурные и vendor-иконки и оригинальный значок приложения сохраняются; серебристый эксперимент отменён.\n\nЭтот документ извлечён из текущих `devspace.css`, `wiki-design.css`, `workbench.css`, `Icons.tsx` и `iconCatalog.ts`, компонентов страницы, темы, коллекций и агентской области, а также существующих настроек и инструментов. Он сохраняет исходную Graphite-систему и описывает реализованные расширения. Документ фиксирует код, а не результаты визуального или пользовательского тестирования: новых UI-скриншотов нет, браузерная проверка ограничена средой. Успешные сборка и service-тесты не являются визуальным PASS. Старые снимки README и `design/DESIGN.md` не подтверждают новый UI. Локальные игровые примеры, изображения и seed-генераторы из игнорируемой `.cache/local-game-demo` не определяют дизайн-систему и не относятся к распространяемому продукту.",
     "keyCharacteristics": [
       "Тональные поверхности и тонкие разделители вместо декоративного свечения.",
-      "Одна общая оболочка материалов, документов и живых агентских сессий.",
+      "Независимые локальные спейсы с чатами слева и проектные материалы справа.",
       "От одной до четырёх независимых панелей агентов с переносимыми вкладками.",
       "Сворачиваемая навигация, сохраняющая значки и состояния агентов.",
       "Короткая UI-типографика и более свободный текст документа.",
       "Живые превью коллекций ведут к полным темам и отдельной галерее файлов изображений.",
+      "Текст, медиа и коллекции редактируются в общем упорядоченном потоке страницы.",
+      "Прежние контурные и vendor-иконки сохраняют смысл свёрнутой навигации.",
       "Наложенные служебные поверхности появляются по запросу."
     ],
     "rules": [
       {
         "name": "The Tonal Selection Rule",
-        "body": "Текущее место, вкладка и выбранный режим выделяются тональной подложкой. У активной ячейки агента дополнительно есть тонкий акцентный контур: он указывает получателя ввода. Это функциональное состояние не переносится на произвольные неактивные контейнеры.",
+        "body": "Текущее место, вкладка и выбранный режим выделяются тональной подложкой. В агентской области активный получатель ввода дополнительно отмечен тонкой нижней линией выбранной вкладки. Акцент не создаёт вложенную рамку вокруг каждой ячейки.",
         "section": "colors"
       },
       {
@@ -282,24 +348,31 @@
         "name": "The Overlay Depth Rule",
         "body": "Выраженная тень объясняет наложение временной поверхности. Постоянные строки и панели не получают её автоматически.",
         "section": "elevation"
+      },
+      {
+        "name": "The Shared Icon Rule",
+        "body": "Системные действия и темы используют общий `Icons.tsx`/`iconCatalog.ts`, а не отдельные случайные icon-font или растровые значки. Пользовательский Unicode/эмодзи темы — явный выбор пользователя, сохраняемый вместе с темой; он не заменяет базовый знак приложения.",
+        "section": "shapes"
       }
     ],
     "dos": [
-      "Do использовать одну графитовую оболочку для Space и встроенных агентов.",
+      "Do сохранять Graphite-оболочку со спейсами и чатами слева, проектом и файлами справа.",
       "Do сохранять видимые значки и доступные описания агентов при сворачивании навигации.",
       "Do различать выбранную вкладку и активную ячейку, сохраняя видимый получатель клавиатурного ввода.",
       "Do выделять выбранное место тоном, а фокус — видимым контуром.",
       "Do ограничивать ширину документа и разделять прокрутку ленты и постоянного ввода.",
       "Do сообщать сохранение, ошибку и состояние агента текстом вместе с графическим знаком.",
-      "Do вести превью к полному материалу и сохранять отдельную идентичность записи и вложенного изображения."
+      "Do вести превью к полному материалу и сохранять отдельную идентичность записи и вложенного изображения.",
+      "Do сохранять порядок текста, медиа и ссылок коллекций и показывать действия редактирования у того узла, к которому они относятся."
     ],
     "donts": [
-      "Don't добавлять прежнего маскота, звезду или цветное свечение в новую рабочую оболочку.",
+      "Don't заменять сохранённые исходные иконки и оригинальный значок приложения отменённым серебристым оформлением.",
       "Don't превращать каждую строку или абзац в карточку с тенью.",
       "Don't распространять частные унаследованные стили переписки на все новые поверхности.",
       "Don't закреплять пользовательские шрифты, аппаратную конфигурацию или локальные демонстрационные материалы как обязательную часть продукта.",
       "Don't считать статическое описание кода подтверждением браузерной, нативной или мобильной проверки.",
-      "Don't распространять лимит восьми превью главной на полную тему или обрезать изображения фотогалереи по правилам обложки."
+      "Don't распространять лимит восьми превью главной на полную тему или обрезать изображения фотогалереи по правилам обложки.",
+      "Don't возвращать вложенные рамки в агентские ячейки или заменять единый набор контурных пиктограмм случайными несогласованными значками."
     ]
   }
 }

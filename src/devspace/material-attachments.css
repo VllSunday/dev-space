@@ -1,0 +1,27 @@
+.ds-material-attachments{position:relative;min-width:0}
+html body.devspace-shell .ds-material-attachments:is(:focus,:focus-visible){outline:none;box-shadow:none}
+.ds-material-attachments.is-dragging{outline:1px dashed var(--ds-accent);outline-offset:8px;border-radius:5px}
+.ds-material-attachments .ds-record-files{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;margin:16px 0 0}
+.ds-material-attachments .ds-record-files:empty{display:none}
+.ds-material-attachments .ds-record-files figure{margin:0;min-width:0;border:1px solid var(--ds-border);border-radius:6px;overflow:hidden;background:var(--ds-canvas)}
+.ds-material-attachments .ds-record-files figure>a{display:block;max-width:100%}
+.ds-material-attachments .ds-record-files img{display:block;width:100%;height:auto;max-height:340px;object-fit:contain;margin:0;background:var(--ds-canvas)}
+.ds-material-attachments .ds-record-files figcaption{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 10px;font-size:11px;min-width:0}
+.ds-material-attachments .ds-record-files figcaption>a{flex:1;min-width:100px;overflow-wrap:anywhere;color:var(--ds-muted)}
+.ds-material-attachments .ds-attachment-remove{width:28px;height:28px;min-height:28px;padding:5px;flex-shrink:0;color:var(--ds-muted)}
+.ds-attachment-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px;padding:10px 0}
+.ds-attachment-toolbar button{font-size:11px;min-height:30px}
+.ds-attachment-toolbar small{font-size:10px;color:var(--ds-muted);line-height:1.6}
+.ds-attachment-status,.ds-attachment-error{font-size:11px;line-height:1.6;margin:4px 0 12px!important}
+.ds-attachment-status{color:var(--ds-muted)}
+.ds-attachment-error{color:var(--ds-error)}
+.ds-attachment-pending{padding:12px;border:1px solid var(--ds-input);border-radius:6px;margin-top:14px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-size:11px}
+.ds-attachment-pending>span{color:var(--ds-muted)}
+.ds-attachment-pending>div{display:flex;align-items:center;gap:8px;width:100%;min-width:0}
+.ds-attachment-pending img{width:48px;height:40px;object-fit:contain;border-radius:4px}
+.ds-attachment-pending>div>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.ds-attachment-drop{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;gap:10px;border:1px dashed var(--ds-accent);border-radius:6px;background:color-mix(in srgb,var(--ds-canvas) 92%,transparent);color:var(--ds-text);font-size:13px;pointer-events:none}
+@media(max-width:650px){.ds-attachment-toolbar small{flex-basis:100%}.ds-material-attachments .ds-record-files{grid-template-columns:1fr}.ds-attachment-drop{padding:16px;text-align:center}}
+.ds-record-actions button[aria-label^="Удалить"]:hover,.ds-delete-material:hover{color:var(--ds-error)}
+.ds-material-toolbar{flex-wrap:wrap}
+.dev-space .ds-toast .ds-toast-undo{width:auto;min-height:28px;padding:4px 10px;border:1px solid var(--ds-input)}

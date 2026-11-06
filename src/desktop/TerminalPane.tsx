@@ -7,13 +7,13 @@ import '@xterm/xterm/css/xterm.css'
 import { api, onServiceEvent, pickFiles, reportError, sendEvent, uploadImage } from './client'
 import { Icon } from './Icons'
 import type { AgentId } from './types'
-import { decorateTerminal, originalTheme, terminalTheme, terminalRoleColors, type TerminalAppearance } from './terminalAppearance'
+import { decorateTerminal, originalTheme, terminalTheme, terminalSurfaceTheme, terminalRoleColors, type TerminalAppearance } from './terminalAppearance'
 import { useWorkspaceTheme } from '../lib/workspace-theme'
 import { fileManager, isMac, modKey, modLabel } from './platform'
 import { deferredClipboardWrite, terminalClipboardGate, terminalCopyWindow, type PendingCopy } from './terminalClipboard'
 import { dictationInput, dictationPasteEvent, type DictationPasteRequest } from './terminalDictation'
 
-export default function TerminalPane({ id, agent, fontSize, appearance, optionMeta, onAttachmentStatus, focused = true, fontFamily }: { id: string; agent: AgentId; fontSize: number; appearance: TerminalAppearance; optionMeta: boolean; focused?: boolean; fontFamily?: string; onAttachmentStatus: (id: string, text: string) => void }) {
+export default function TerminalPane({ id, agent, fontSize, appearance, optionMeta, onAttachmentStatus, focused = true, fontFamily, matchSurface = false }: { id: string; agent: AgentId; fontSize: number; appearance: TerminalAppearance; optionMeta: boolean; focused?: boolean; fontFamily?: string; matchSurface?: boolean; onAttachmentStatus: (id: string, text: string) => void }) {
   useLocale()
   const { resolved } = useWorkspaceTheme('chat')
   const focusedRef = useRef(focused); focusedRef.current = focused
@@ -254,10 +254,12 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
   useEffect(() => {
     const terminal = terminalRef.current
     if (!terminal) return
-    terminal.options.theme = terminalTheme(appearance, resolved)
+    const theme=terminalTheme(appearance,resolved)
+    const surface=matchSurface&&area.current?getComputedStyle(area.current).getPropertyValue('--ds-canvas').trim():''
+    terminal.options.theme = surface?terminalSurfaceTheme(theme,surface):theme
     terminal.options.minimumContrastRatio = 4.5
     if (appearance === 'focus') return decorateTerminal(terminal, agent, terminalRoleColors(resolved))
-  }, [id, agent, appearance, resolved])
+  }, [id, agent, appearance, resolved, matchSurface])
   useEffect(() => {
     if (terminalRef.current) terminalRef.current.options.macOptionIsMeta = optionMeta
   }, [id, agent, optionMeta])

@@ -22,10 +22,10 @@ try {
   await page.goto(service.urls.workspace);
   await page.locator('.dev-space .ds-canvas').waitFor();
   const results = [];
-  for (const width of [960, 1280, 1920, 2560]) {
+  for (const width of [901, 960, 1150, 1151, 1280, 1920, 2560]) {
     await page.setViewportSize({ width, height: 1080 });
     for (const collapsed of [false, true]) {
-      if (await page.locator('.dev-space').evaluate(el => el.classList.contains('rail-collapsed')) !== collapsed) await page.keyboard.press('Control+b');
+      if (await page.locator('.dev-space').evaluate(el => el.classList.contains('project-nav-collapsed')) !== collapsed) await page.keyboard.press('Control+b');
       for (const agentsOpen of [false, true]) {
         if (await page.locator('.ds-agent-pane').count() !== Number(agentsOpen)) await page.keyboard.press('Control+j');
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -34,15 +34,20 @@ try {
           return { shell: rect('.dev-space'), canvas: rect('.ds-canvas'), pane: rect('.ds-agent-pane'), viewport: innerWidth, scroll: document.documentElement.scrollWidth };
         });
         assert.ok(Math.abs(rects.shell.width - width) <= 1, `shell must fill ${width}px: ${JSON.stringify(rects)}`);
-        assert.ok(Math.abs(rects.canvas.right - (width - 8)) <= 1, `canvas must reach the window edge: ${JSON.stringify(rects)}`);
+        assert.ok(Math.abs((agentsOpen&&width<=1150?rects.pane.right:rects.canvas.right) - (width - 8)) <= 1, `rightmost area must reach the window edge: ${JSON.stringify(rects)}`);
         assert.ok(rects.scroll <= width, `shell must not overflow: ${JSON.stringify(rects)}`);
         assert.ok(rects.canvas.width >= 350, 'workspace must remain usable');
-        if (agentsOpen) assert.ok(rects.pane.right <= rects.canvas.left, 'agent pane must not overlap workspace');
+        if (agentsOpen&&width>1150) assert.ok(rects.pane.right <= rects.canvas.left, 'left agent pane must precede the project without overlap');
+        if (agentsOpen&&width<=1150) assert.ok(rects.pane.left>=0&&rects.pane.right<=width, 'narrow agent area must stay fully inside the window');
         results.push({ width, collapsed, agentsOpen, canvasWidth: Math.round(rects.canvas.width) });
       }
     }
   }
-  console.log(JSON.stringify({ passed: results.length, results }, null, 2));
+  const handle=page.getByRole('separator',{name:'Ширина области агентов',exact:true}),before=await page.locator('.ds-agent-pane').boundingBox(),box=await handle.boundingBox();
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+80,box.y+box.height/2);await page.mouse.up();
+  const after=await page.locator('.ds-agent-pane').boundingBox();assert.ok(after.width>before.width+60,'dragging a left dock divider right should make the dock wider');
+  await handle.focus();await handle.press('ArrowRight');assert.ok((await page.locator('.ds-agent-pane').boundingBox()).width>after.width,'ArrowRight should widen the left-hand dock');
+  console.log(JSON.stringify({ passed: results.length, results, leftDockResize:true }, null, 2));
 } finally {
   await browser?.close();
   await service.close();

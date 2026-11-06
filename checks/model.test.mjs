@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fromMarkdown,toMarkdown,normalizePath,remainingDraft,safeLink,sessionStatus } from '../src/devspace/model.ts';
+
+test('Markdown follows the visible composition and keeps rich block kinds',()=>{
+ const blocks=[{id:'a',type:'text',text:'First'},{id:'b',type:'quote',text:'Second'},{id:'m',type:'model',text:'Courier',asset:'workspace/devspace/assets/courier.glb'}];
+ const flow=[{id:'f-b',type:'block',blockId:'b'},{id:'collection',type:'collection',topicId:'world',view:'list'},{id:'f-a',type:'block',blockId:'a'},{id:'f-m',type:'block',blockId:'m'}];
+ const markdown=toMarkdown({blocks,flow});assert.ok(markdown.indexOf('Second')<markdown.indexOf('First'));assert.ok(!markdown.includes('collection'));
+ const parsed=fromMarkdown(markdown,blocks);assert.equal(parsed[0].type,'quote');assert.equal(parsed.at(-1).type,'model');assert.equal(parsed.at(-1).asset,blocks[2].asset);
+});
 test('status derives from live session rather than simulated timers',()=>{
  const s={status:'running',activity:'idle',attention:false,unread:false};
  assert.equal(sessionStatus({...s,activity:'working'}).kind,'working');assert.equal(sessionStatus({...s,attention:true}).kind,'waiting');assert.equal(sessionStatus({...s,unread:true}).kind,'done');assert.equal(sessionStatus({...s,status:'exited'}).kind,'inactive');assert.equal(sessionStatus({...s,status:'exited',exitCode:1}).kind,'error');

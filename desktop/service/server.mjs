@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { DevSpace } from './devspace.mjs';
+import { initializeAgentSpaces, agentSpacesSnapshot, changeAgentSpaces, sessionSpaceId } from './agent-spaces.mjs';
 import path from 'node:path';
 import { readFile, stat, realpath } from 'node:fs/promises';
 import { watch } from 'node:fs';
@@ -12,6 +13,7 @@ import { importFile, dragFiles, moveFile, recyclePath, MAX_FILE_BYTES } from './
 import { inventory } from './agents.mjs';
 import { Attachments, attachmentText, MAX_IMAGE_BYTES } from './attachments.mjs';
 import { ContextLibrary } from './context.mjs';
+import { skillLocations } from './skill-locations.mjs';
 import { groupLabel, taskTitle } from './titles.mjs';
 import { taskEffort } from './effort.mjs';
 import { Workspace, localDay, metadataPatch } from './workspace.mjs';
@@ -100,6 +102,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const registry = async () => readJson(path.join(repo, 'workspace', 'workspace.json'), { entities: [] });
   const workspace = new Workspace(repo, () => broadcast('workspace-changed', {}));
   const devspace = await new DevSpace(repo, () => broadcast('devspace-changed', {})).init();
+  initializeAgentSpaces(settings,repo,sessions.list());await saveSettings();
+  let agentSpacesQueue=Promise.resolve();
+  const bindAgentSpace=async(id,spaceId)=>{settings.agentSessionSpaces={...settings.agentSessionSpaces,[id]:spaceId};await saveSettings();broadcast('settings',{settings})};
   const cards = new CardDocuments(workspace);
   const history = query => sessions.list().filter(item => !query || `${item.name} ${item.agent} ${item.cwd} ${item.preview || ''}`.normalize('NFC').toLowerCase().includes(query.normalize('NFC').toLowerCase())).sort((a, b) => Number(b.pinned) - Number(a.pinned) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
   const closeChat = async id => {
@@ -107,7 +112,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     if (selectedId === id) { selectedId = sessions.active()[0]?.id || null; settings.selectedId = selectedId; scheduleSettings(); broadcast('selection', { selectedId }); }
     return { closed: true, savedInHistory: true };
   };
-  const handoffs = new Handoffs({ repo, sessions, transcripts, opened: id => focus(id), changed: (id, handoff) => broadcast('handoff', { id, handoff }) });
+  const handoffs = new Handoffs({ repo, sessions, transcripts, opened: async(id,sourceId)=>{await bindAgentSpace(id,sessionSpaceId(settings,sourceId));focus(id)}, changed: (id, handoff) => broadcast('handoff', { id, handoff }) });
   const attach = async (id, paths, coordinator = false) => {
     const session = sessions.get(id);
     const verified = await attachments.paths(paths);
@@ -134,7 +139,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         case 'open_chat': {
           args = openChatArguments(args);
           if (args.bypass === true && settings.defaultBypass !== true) throw new Error('To enable bypass, choose it yourself in New chat or Settings. Dev Space cannot raise the selected permission level.');
+          const spaceId=settings.selectedAgentSpaceId;
           const session = await sessions.create({ agent: args.agent, cwd: args.cwd, name: taskTitle(args.name), effort: taskEffort(latestRequest, args.effort), bypass: args.bypass === false ? false : settings.defaultBypass === true });
+          await bindAgentSpace(session.id,spaceId);
           focus(session.id); return session;
         }
         case 'read_chat': return sessions.read(args.id);
@@ -254,6 +261,15 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           for (const key of ['interfaceFont', 'terminalFont']) if (settings.display[key] === removed.family) settings.display[key] = defaultDisplay[key];
           await saveSettings(); broadcast('settings', { settings }); broadcast('appearance-fonts', {}); return json(response, 200, await fonts.list());
         }
+        if(method==='GET'&&url.pathname==='/api/agent-spaces')return json(response,200,agentSpacesSnapshot(settings));
+        if(method==='POST'&&url.pathname==='/api/agent-spaces'){
+          const operation=agentSpacesQueue.catch(()=>{}).then(async()=>{const result=await changeAgentSpaces(settings,data,sessions.list(),{closeSessions:async ids=>{for(const id of ids)await closeChat(id)}});await saveSettings();broadcast('settings',{settings});return result});agentSpacesQueue=operation;return json(response,200,await operation);
+        }
+        if(method==='POST'&&url.pathname==='/api/agent-space-layout'){
+          if(!settings.agentSpaces.some(s=>s.id===data.spaceId))throw Object.assign(Error('Agent space not found.'),{status:404});
+          let layout;try{layout=validateLayout(data.layout)}catch(error){throw Object.assign(error,{status:400})}
+          settings.agentSpaceLayouts={...settings.agentSpaceLayouts,[data.spaceId]:layout};await saveSettings();return json(response,200,layout);
+        }
         if (method === 'POST' && url.pathname === '/api/agent-layout') {
           if (!(await devspace.read()).projects.some(project => project.id === data.projectId)) throw Object.assign(Error('Проект не найден.'), { status: 400 });
           let layout; try { layout = validateLayout(data.layout); } catch (error) { throw Object.assign(error, { status: 400 }); }
@@ -261,6 +277,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           await saveSettings(); return json(response, 200, layout);
         }
         if (method === 'PUT' && url.pathname === '/api/devspace/drafts') return json(response, 200, await devspace.saveDraft(data));
+        if (method === 'POST' && url.pathname === '/api/devspace/files/import') return json(response,201,await devspace.importFile(data.path));
         if (method === 'POST' && url.pathname === '/api/devspace') return json(response, 200, await devspace.mutate(data));
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
         if (method === 'POST' && url.pathname === '/api/dictation/local') {
@@ -332,6 +349,11 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         }
         if (method === 'GET' && url.pathname === '/api/history') return json(response, 200, history(url.searchParams.get('q') || ''));
         if (method === 'POST' && url.pathname === '/api/history/import') return json(response, 201, await sessions.importConversation(data));
+        if (method === 'GET' && url.pathname === '/api/skill-locations') {
+          const id=url.searchParams.get('projectId'),project=id?(await devspace.read()).projects.find(p=>p.id===id):null;
+          if(id&&!project)throw Object.assign(Error('Project not found.'),{status:404});
+          return json(response,200,await skillLocations(project?.path||repo));
+        }
         if (method === 'GET' && url.pathname === '/api/files') return json(response, 200, await files.list(url.searchParams.get('path') || repo, url.searchParams.get('mode') || 'main', url.searchParams.get('q') || ''));
         if (method === 'POST' && url.pathname === '/api/files/pick') {
           if (typeof data.requestId !== 'string' || !/^[a-f\d-]{36}$/i.test(data.requestId)) throw new Error('Invalid file picker request.');
@@ -360,6 +382,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         }
         if (method === 'POST' && url.pathname === '/api/settings') {
           if (data.display !== undefined) settings.display = displaySettings(data.display, settings.display);
+          if (typeof data.agentRailCollapsed==='boolean')settings.agentRailCollapsed=data.agentRailCollapsed;
           if (data.spaceLayout && typeof data.spaceLayout === 'object') { const value=data.spaceLayout; settings.spaceLayout={projectId: String(value.projectId||'').slice(0,100),topicId:String(value.topicId||'all').slice(0,100),collapsed:!!value.collapsed,agentOpen:!!value.agentOpen,agentWidth:Math.max(320,Math.min(1400,Number(value.agentWidth)||500)),agentWide:!!value.agentWide,toolsWidth:Math.max(320,Math.min(10000,Number(value.toolsWidth)||settings.spaceLayout?.toolsWidth||520))}; }
           if (inventory().some(item => item.id === data.defaultAgent)) settings.defaultAgent = data.defaultAgent;
           if (typeof data.defaultBypass === 'boolean') settings.defaultBypass = data.defaultBypass;
@@ -379,7 +402,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (['ru', 'en'].includes(data.language)) native({ type: 'language', language: settings.language });
           return json(response, 200, settings);
         }
-        if (method === 'POST' && url.pathname === '/api/sessions') { if(data.projectId && !(await devspace.read()).projects.some(p=>p.id===data.projectId))throw Object.assign(new Error('Проект не найден.'),{status:400});const session = await sessions.create({ ...data, bypass: data.bypass ?? settings.defaultBypass });if(data.projectId){settings.spaceSessionProjects={...(settings.spaceSessionProjects||{}),[session.id]:data.projectId};await saveSettings();broadcast('settings',{settings});} await integrations.publish('session', { event: 'started', session }); focus(session.id); return json(response, 201, session); }
+        if (method === 'POST' && url.pathname === '/api/sessions') { if(data.projectId && !(await devspace.read()).projects.some(p=>p.id===data.projectId))throw Object.assign(new Error('Проект не найден.'),{status:400});const agentSpaceId=data.spaceId||settings.selectedAgentSpaceId;if(!settings.agentSpaces.some(s=>s.id===agentSpaceId))throw Object.assign(Error('Agent space not found.'),{status:404});const session = await sessions.create({ ...data, bypass: data.bypass ?? settings.defaultBypass });settings.agentSessionSpaces={...settings.agentSessionSpaces,[session.id]:agentSpaceId};await saveSettings();broadcast('settings',{settings});if(data.projectId){settings.spaceSessionProjects={...(settings.spaceSessionProjects||{}),[session.id]:data.projectId};await saveSettings();broadcast('settings',{settings});} await integrations.publish('session', { event: 'started', session }); focus(session.id); return json(response, 201, session); }
         if (method === 'POST' && url.pathname === '/api/groups/move') return json(response, 200, await sessions.moveGroup(data.group, data.pinned, data.targetId, data.position));
         if (method === 'POST' && url.pathname === '/api/groups/rename') {
           // A renamed group keeps its color and collapsed state; merging into an

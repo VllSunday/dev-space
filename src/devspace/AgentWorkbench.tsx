@@ -11,10 +11,10 @@ type DropTarget = { paneId: string; edge: Edge }
 const memory = new Map<string, PaneLayout>()
 const uid = () => crypto.randomUUID()
 
-export default function AgentWorkbench({ projectId, initialCwd, scopeIds, request, handledRequest, expanded, expand, close }: { projectId: string; initialCwd: string; scopeIds: string[]; request: PaneRequest | null; handledRequest: () => void; expanded: boolean; expand: () => void; close: () => void }) {
-  const state = useDesktop(), key = state.repo + ':' + projectId
+export default function AgentWorkbench({ projectId, spaceId, initialCwd, scopeIds, request, handledRequest, expanded, expand, close }: { projectId?: string; spaceId?: string; initialCwd: string; scopeIds: string[]; request: PaneRequest | null; handledRequest: () => void; expanded: boolean; expand: () => void; close: () => void }) {
+  const state = useDesktop(), key = state.repo + ':' + (spaceId ? 'space:' + spaceId : projectId)
   const open = orderedChats(state.sessions).filter(session => scopeIds.includes(session.id)), openKey = open.map(session => session.id).join(',')
-  const [layout, setLayout] = useState(() => normalizeLayout(memory.get(key) || state.settings.agentLayouts?.[projectId], open.map(session => session.id)))
+  const [layout, setLayout] = useState(() => normalizeLayout(memory.get(key) || (spaceId ? state.settings.agentSpaceLayouts?.[spaceId] : projectId ? state.settings.agentLayouts?.[projectId] : undefined), open.map(session => session.id)))
   const current = useRef(layout); current.current = layout
   const openIds = useRef(open.map(session => session.id)); openIds.current = open.map(session => session.id)
   const grid = useRef<HTMLDivElement>(null), menuRef = useRef<HTMLDivElement>(null)
@@ -25,8 +25,8 @@ export default function AgentWorkbench({ projectId, initialCwd, scopeIds, reques
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const persist = useCallback((value: PaneLayout) => {
     memory.set(key, value)
-    saveQueue.current = saveQueue.current.catch(() => {}).then(() => api('/agent-layout', { projectId, layout: value })).catch(reportError)
-  }, [key, projectId])
+    saveQueue.current = saveQueue.current.catch(() => {}).then(() => api(spaceId ? '/agent-space-layout' : '/agent-layout', { projectId, spaceId, layout: value })).catch(reportError)
+  }, [key, projectId, spaceId])
   const update = (next: PaneLayout) => {
     if (JSON.stringify(next) === JSON.stringify(current.current)) return
     current.current = next; memory.set(key, next); setLayout(next)
@@ -67,7 +67,12 @@ export default function AgentWorkbench({ projectId, initialCwd, scopeIds, reques
   }
   useEffect(() => { update(normalizeLayout(current.current, openIds.current)) }, [openKey])
   useEffect(() => {
-    if (closingTab.current || !state.selectedId || !openIds.current.includes(state.selectedId)) return
+    if (closingTab.current) return
+    if (!state.selectedId || !openIds.current.includes(state.selectedId)) {
+      const selected=panes(current.current.root).find(p=>p.id===current.current.activePaneId)?.selectedId
+      if(selected)selectChat(selected)
+      return
+    }
     const pane = panes(current.current.root).find(pane => pane.tabs.includes(state.selectedId!))
     if (pane) update(changeLayout(current.current, { type: 'focus', paneId: pane.id, tabId: state.selectedId }))
   }, [state.selectedId, openKey])
@@ -136,8 +141,8 @@ export default function AgentWorkbench({ projectId, initialCwd, scopeIds, reques
     <header className="ds-agent-pane-heading"><Icon name="terminal" size={13}/><span>Агенты</span><span className="ds-fill"/><button onClick={event => openMenu(event)} aria-label="Раскладка панелей" title="Разделение и раскладка панелей"><Icon name="workspace" size={14}/><span>{leaves.length > 1 ? `${leaves.length} панели` : 'Раскладка'}</span></button><button onClick={expand} aria-label={expanded ? 'Вернуть материалы рядом' : 'Агенты на всю рабочую область'} title={expanded ? 'Вернуть материалы рядом' : 'На всю рабочую область'}><Icon name="external" size={14}/></button><button onClick={close} aria-label="Свернуть область агентов" title="Свернуть · Ctrl+J"><Icon name="close" size={14}/></button></header>
     <div className="agent-grid" ref={grid}>
       {geometry.cells.map(({ pane, x, y, width, height }, index) => <section key={pane.id} data-agent-pane={pane.id} data-pane-active={layout.activePaneId === pane.id} tabIndex={-1} className={'agent-cell '+(layout.activePaneId === pane.id ? 'active' : '')} aria-label={`Панель агентов ${index + 1}`} style={layout.zoomedPaneId === pane.id ? { inset: 0, width: '100%', height: '100%' } : { left: x+'%', top: y+'%', width: width+'%', height: height+'%', display: layout.zoomedPaneId ? 'none' : undefined }} onPointerDownCapture={() => { if (layout.activePaneId !== pane.id) dispatch({ type: 'focus', paneId: pane.id }) }} onFocusCapture={() => { if (current.current.activePaneId !== pane.id) dispatch({ type: 'focus', paneId: pane.id }) }}>
-        <header className="agent-cell-heading"><span>Панель {index + 1}</span><span className="ds-fill"/><button title={layout.zoomedPaneId === pane.id ? 'Вернуть раскладку · Ctrl+Shift+Z' : 'Развернуть панель · Ctrl+Shift+Z'} aria-label={`Развернуть или вернуть панель ${index + 1}`} onClick={() => paneAction('zoom', pane.id)}><Icon name="workspace" size={12}/></button><button aria-label={`Действия панели ${index + 1}`} title="Действия панели" onClick={event => openMenu(event, pane.id)}><Icon name="more" size={14}/></button></header>
-        <Chats embedded initialCwd={initialCwd} projectId={projectId} scopeIds={scopeIds} pane={{ id: pane.id, ids: pane.tabs, selectedId: pane.selectedId, focused: layout.activePaneId === pane.id, close: id => void closeTab(pane.id, id), choose: id => choose(pane.id, id), targets: leaves.filter(other => other.id !== pane.id).map(other => ({ id: other.id, name: `Панель ${leaves.indexOf(other) + 1}` })), move: (tabId, paneId) => choose(paneId, tabId), drag }}/>
+
+        <Chats embedded initialCwd={initialCwd} projectId={projectId} spaceId={spaceId} scopeIds={scopeIds} pane={{ id: pane.id, ids: pane.tabs, selectedId: pane.selectedId, focused: layout.activePaneId === pane.id, controls: <><button title={layout.zoomedPaneId === pane.id ? 'Вернуть раскладку · Ctrl+Shift+Z' : 'Развернуть панель · Ctrl+Shift+Z'} className="ds-pane-control" aria-label={`Развернуть или вернуть панель ${index + 1}`} onClick={() => paneAction('zoom', pane.id)}><Icon name="workspace" size={12}/></button><button className="ds-pane-control" aria-label={`Действия панели ${index + 1}`} title="Действия панели" onClick={event => openMenu(event, pane.id)}><Icon name="more" size={14}/></button></>, close: id => void closeTab(pane.id, id), choose: id => choose(pane.id, id), targets: leaves.filter(other => other.id !== pane.id).map(other => ({ id: other.id, name: `Панель ${leaves.indexOf(other) + 1}` })), move: (tabId, paneId) => choose(paneId, tabId), drag }}/>
         {drop?.paneId === pane.id && <div className={`agent-drop-preview edge-${drop.edge} ${drop.edge !== 'center' && leaves.length >= 4 ? 'blocked' : ''}`}><span>{drop.edge !== 'center' && leaves.length >= 4 ? 'Максимум 4 панели' : drop.edge === 'center' ? 'Переместить сюда' : 'Разделить и перенести'}</span></div>}
       </section>)}
       {!layout.zoomedPaneId && geometry.dividers.map(divider => <div key={divider.id} className={'agent-divider '+divider.axis} role="separator" tabIndex={0} aria-label="Размер панелей агентов" aria-orientation={divider.axis === 'row' ? 'vertical' : 'horizontal'} aria-valuemin={20} aria-valuemax={80} aria-valuenow={Math.round(divider.ratio * 100)} style={divider.axis === 'row' ? { left: (divider.x + divider.width * divider.ratio)+'%', top: divider.y+'%', height: divider.height+'%' } : { top: (divider.y + divider.height * divider.ratio)+'%', left: divider.x+'%', width: divider.width+'%' }} onPointerDown={event => resize(event, divider)} onDoubleClick={() => dispatch({ type: 'ratio', splitId: divider.id, ratio: .5 })} onKeyDown={event => { if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'Home'].includes(event.code)) { event.preventDefault(); dispatch({ type: 'ratio', splitId: divider.id, ratio: event.code === 'Home' ? .5 : divider.ratio + (['ArrowLeft', 'ArrowUp'].includes(event.code) ? -.025 : .025) }) } }}/>) }

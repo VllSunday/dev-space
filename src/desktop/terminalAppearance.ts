@@ -22,6 +22,11 @@ export const focusTheme: ITheme = {
   }),
 }
 
+// Match an embedded terminal to its surrounding panel without recoloring CLI output.
+export function terminalSurfaceTheme(theme: ITheme, background: string): ITheme {
+  return {...theme,background,cursorAccent:background,scrollbarSliderBackground:'#8f969e55',scrollbarSliderHoverBackground:'#a8afb877',scrollbarSliderActiveBackground:'#bbc3cd99'}
+}
+
 export function terminalRoleColors(theme: PaletteId) {
   if (theme === 'dark') return roleColors
   const palette = themePalette(theme)

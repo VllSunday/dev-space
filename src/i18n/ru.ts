@@ -1347,5 +1347,6 @@ export const ru: Record<string, string> = {
   "Workspace report does not exist": "Отчёт рабочего пространства не существует.",
   "Write a message or attach a file.": "Напишите сообщение или прикрепите файл.",
   "Write a message or attach an image.": "Напишите сообщение или прикрепите изображение.",
-  "You are typing in this chat. Wait a moment before sending through Dev Space.": "Вы сейчас печатаете в этом чате. Подождите немного перед отправкой через Dev Space."
+  "You are typing in this chat. Wait a moment before sending through Dev Space.": "Вы сейчас печатаете в этом чате. Подождите немного перед отправкой через Dev Space.",
+  "This folder does not exist. Choose another folder.": "Папка не найдена. Выберите другое расположение."
 }

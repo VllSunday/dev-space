@@ -1,16 +1,17 @@
 import path from 'node:path';
-import os from 'node:os';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { commandPath } from './agents.mjs';
 import { within } from './util.mjs';
+import {skillLocationDefinitions} from './skill-locations.mjs';
 const execute = promisify(execFile);
 
 export class ContextLibrary {
   constructor(repo) {
     this.repo = repo;
-    this.skillRoots = [path.join(repo, '.agents', 'skills'), path.join(repo, '.claude', 'skills'), path.join(os.homedir(), '.agents', 'skills'), path.join(os.homedir(), '.codex', 'skills'), path.join(os.homedir(), '.codex', 'plugins', 'cache')];
+    const locations=skillLocationDefinitions(repo),order=['project-agents','project-claude','personal-agents','personal-codex','plugins-codex','project-codex','personal-claude','plugins-claude'];
+    this.skillRoots = [...new Set(order.map(id=>locations.find(location=>location.id===id).path))];
   }
   async orientation() {
     const names = ['AGENTS.md', 'context/me.md', 'context/identity.md', 'context/goals.md', 'context/preferences.md', 'desktop/coordinator.md'];

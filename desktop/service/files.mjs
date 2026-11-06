@@ -10,7 +10,7 @@ import { serveReport } from './report-chrome.mjs';
 const mime = {
   '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.ico': 'image/x-icon', '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.webm': 'video/webm',
+  '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp', '.avif': 'image/avif', '.ico': 'image/x-icon', '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.webm': 'video/webm',
   '.m4v': 'video/mp4', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.bin': 'application/octet-stream',
   '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.wasm': 'application/wasm', '.txt': 'text/plain; charset=utf-8', '.md': 'text/plain; charset=utf-8',
 };
@@ -100,7 +100,10 @@ export class Files {
     return `${this.origin}/view/${this.grant(root)}/${path.relative(root, absolute).split(path.sep).map(encodeURIComponent).join('/')}`;
   }
   async list(folder = this.repo, mode = 'main', query = '') {
-    const actual = await realpath(path.resolve(expandHome(folder)));
+    const actual = await realpath(path.resolve(expandHome(folder))).catch(error=>{
+      if(error.code==='ENOENT'||error.code==='ENOTDIR')throw Object.assign(Error('This folder does not exist. Choose another folder.'),{status:404});
+      throw error;
+    });
     const entries = await readdir(actual, { withFileTypes: true });
     const atRoot = actual.toLowerCase() === this.repo.toLowerCase();
     const filtered = entries.filter(entry => (!atRoot || mode === 'all' || ['inbox', 'projects', 'workspace', 'knowledge', 'processes', 'context'].includes(entry.name)) && (!query || entry.name.normalize('NFC').toLowerCase().includes(query.normalize('NFC').toLowerCase())));

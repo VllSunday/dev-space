@@ -1,0 +1,89 @@
+/* Keep the two lists independent of their item count, like the approved reference. */
+.ds-spaces-sidebar{display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1fr) auto}
+.ds-spaces-top{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.ds-spaces-list{flex:1;max-height:none;min-height:0;padding-bottom:12px}
+.ds-space-agents{min-height:0;margin:0;padding-top:8px}
+.ds-spaces-footer{margin-top:0}
+
+/* Each pane owns its responsive header instead of wrapping a fixed-height row. */
+.agent-cell{container:agent-pane / inline-size}
+.agent-divider::before{content:'';position:absolute;background:var(--ds-input);pointer-events:none}
+.agent-divider.row::before{left:3px;top:0;bottom:0;width:1px}
+.agent-divider.column::before{top:3px;left:0;right:0;height:1px}
+.agent-divider:hover::before,.agent-divider:focus-visible::before{background:var(--ds-accent)}
+.ds-agent-pane .chat-body{min-width:0;overflow:hidden}
+.ds-agent-pane .agent-cell .chat-tabs-row{height:43px;min-height:43px;align-items:stretch;padding:0 4px}
+.ds-agent-pane .agent-cell .chat-tabs{height:43px;min-height:0;align-items:center;padding:2px 0;gap:3px}
+.ds-agent-pane .agent-cell .chat-tab-group{height:32px;align-items:center}
+.ds-agent-pane .agent-cell .chat-tab{height:32px;max-width:180px;min-width:64px;margin:0;padding:4px 6px!important;flex-shrink:0}
+.ds-agent-pane .agent-cell .chat-tab-actions{height:43px;gap:1px;padding-left:4px}
+.ds-agent-pane .agent-cell .chat-tab-actions>button{width:26px;min-width:26px;height:28px;min-height:28px;padding:4px}
+.ds-agent-pane .agent-cell .chat-context{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;height:auto;min-height:38px;padding:4px 10px;flex-shrink:0}
+.chat-context-meta,.chat-context-tools{display:flex;align-items:center;gap:6px;min-width:0}
+.chat-context-meta{overflow:hidden;flex:1}
+.ds-agent-pane .agent-label{flex-shrink:0;font-size:10px}
+.ds-agent-pane .chat-folder{max-width:none;min-width:0;flex:1;padding-left:7px;font-size:10px}
+.chat-context-tools{justify-content:flex-end}
+.ds-agent-pane .chat-options{top:38px;max-height:calc(100% - 46px);overflow:auto;overscroll-behavior:contain}
+.ds-agent-pane .chat-context-tools>.desk-icon{width:28px;min-width:28px;height:28px;min-height:28px;padding:5px;flex-shrink:0}
+.ds-agent-pane .chat-view-toggle{margin:0;flex-shrink:0;border:1px solid var(--ds-border);background:var(--ds-surface);border-radius:6px;gap:2px}
+.ds-agent-pane .chat-view-toggle button{height:26px;min-height:26px;min-width:30px;font-size:10px;padding:3px 8px;gap:5px;white-space:nowrap;border-radius:4px}
+.ds-agent-pane .chat-view-toggle button svg{width:13px;height:13px;flex-shrink:0}
+.ds-agent-pane .chat-view-toggle button[aria-pressed=true]{background:var(--ds-selection);color:var(--ds-text)}
+.ds-agent-pane .agent-cell .chat-status{height:25px;min-height:25px;flex-shrink:0;flex-wrap:nowrap;gap:8px;overflow:hidden;padding:4px 8px}
+.ds-agent-pane .chat-status>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-agent-pane .chat-status>span:nth-child(2){margin-left:auto;text-align:right}
+.ds-agent-pane .chat-status>span:first-child{flex-shrink:0;max-width:48%}
+.ds-agent-pane .terminal-reconnect{flex-shrink:0;max-height:min(96px,25%);overflow:auto;align-items:center;padding:8px 10px;gap:8px;background:var(--ds-surface);border-bottom:1px solid var(--ds-border);border-top:0;color:var(--ds-muted)}
+.ds-agent-pane .terminal-reconnect>span{min-width:0;overflow-wrap:anywhere;font-size:10px}
+.ds-agent-pane .terminal-reconnect>button{flex-shrink:0;color:var(--ds-text);border-color:var(--ds-input);background:var(--ds-selection);font-size:10px}
+
+/* Put spacing outside xterm's measured host; canvas and gutter share one surface. */
+.ds-agent-pane .terminal-area{padding:8px 6px 8px 10px;background:var(--ds-canvas)}
+.ds-agent-pane .terminal-host .xterm{padding:0;height:100%;background:var(--ds-canvas)}
+.ds-agent-pane .terminal-host .xterm .xterm-scrollable-element>.scrollbar{background:transparent!important}
+
+/* The composer stays on the same baseline with or without a reconnect notice. */
+.ds-agent-pane .desk-conversation{overflow:hidden;background:var(--ds-canvas)}
+.ds-agent-pane .conversation-scroll{padding:18px 0;overscroll-behavior:contain}
+.ds-agent-pane .conversation-column{padding:0 18px;min-width:0}
+.ds-agent-pane .conversation-composer{box-sizing:border-box;width:calc(100% - 24px);margin:0 12px 10px;padding:7px 8px 5px;border:1px solid var(--ds-input);border-radius:9px;background:var(--ds-surface)}
+.ds-agent-pane .conversation-composer:focus-within{border-color:var(--ds-accent)}
+.ds-agent-pane .conversation-composer textarea{box-sizing:border-box;display:block;width:100%;min-height:34px;max-height:260px;border:0;outline:none;border-radius:0;resize:none;background:transparent;color:var(--ds-text);font:12px/1.6 var(--font-body);padding:6px 4px;box-shadow:none;overflow-x:hidden}
+.ds-agent-pane .conversation-composer textarea:focus-visible{outline:none}
+.ds-agent-pane .conversation-actions{min-height:30px;gap:3px;margin-top:1px}
+.ds-agent-pane .conversation-actions>.desk-icon,.ds-agent-pane .conversation-send{width:28px;min-width:28px;height:28px;min-height:28px;padding:5px;flex-shrink:0;border-radius:5px}
+.ds-agent-pane .conversation-status{font-size:9px;color:var(--ds-muted)}
+.ds-agent-pane .conversation-send:disabled{opacity:.35}
+.ds-agent-pane .conversation-empty{padding:36px 8px;gap:10px}
+.ds-agent-pane .conversation-empty h2{font-size:17px;line-height:1.4}
+.ds-agent-pane .conversation-read-aloud{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;line-height:1.4}
+.ds-agent-pane .conversation-read-aloud button{height:32px;min-height:32px;padding:4px 9px;font:11px/1.4 var(--font-body)}
+.ds-agent-pane .conversation-read-aloud select{height:32px;min-height:32px;flex:0 1 210px;min-width:min(100%,190px);max-width:100%;padding:4px 28px 4px 9px;font:11px/1.4 var(--font-body);background:var(--ds-surface);color:var(--ds-text);border:1px solid var(--ds-input);border-radius:5px}
+.ds-agent-pane .conversation-read-aloud :is([role=alert],[role=status]){flex-basis:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.6}
+
+/* Quiet, arrowless scrollbars; xterm retains its own transient overlay scrollbar. */
+:is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect){scrollbar-width:thin;scrollbar-color:#5c626b var(--ds-canvas)}
+@supports selector(::-webkit-scrollbar){
+ :is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect){scrollbar-width:auto}
+ :is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect)::-webkit-scrollbar{width:7px;height:6px}
+ :is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect)::-webkit-scrollbar-track{background:var(--ds-canvas)}
+ :is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect)::-webkit-scrollbar-thumb{background:#555c66;border:2px solid var(--ds-canvas);border-radius:8px}
+ :is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect)::-webkit-scrollbar-thumb:hover{background:#89919c}
+ :is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect)::-webkit-scrollbar-button{display:none;width:0;height:0}
+ :is(.ds-spaces-list,.ds-space-agent-items,.ds-agent-pane .chat-tabs,.ds-agent-pane .conversation-scroll,.ds-agent-pane .conversation-composer textarea,.ds-agent-pane .chat-options,.ds-agent-pane .terminal-reconnect)::-webkit-scrollbar-corner{background:var(--ds-canvas)}
+}
+@container agent-pane (max-width:520px){
+ .ds-agent-pane .agent-cell .chat-context{grid-template-columns:minmax(0,1fr);grid-template-rows:22px 32px;gap:2px;min-height:66px;padding:4px 10px}
+ .chat-context-tools{justify-content:flex-start}
+ .ds-agent-pane .chat-options{top:66px;max-height:calc(100% - 74px)}
+ .ds-agent-pane .agent-cell .chat-tab-actions>button{width:24px;min-width:24px}
+ .ds-agent-pane .conversation-column{padding:0 14px}
+}
+@container agent-pane (max-width:340px){
+ .ds-agent-pane .chat-view-toggle button>span{display:none}
+ .ds-agent-pane .chat-view-toggle button{padding:3px 6px}
+ .ds-agent-pane .conversation-status{display:none}
+ .ds-agent-pane .conversation-send{margin-left:auto}
+ .ds-agent-pane .terminal-reconnect{align-items:flex-start;flex-wrap:wrap}
+}

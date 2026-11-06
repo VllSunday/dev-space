@@ -1,0 +1,96 @@
+/* Two independent work areas: local agent spaces left; project and documents right. */
+.dev-space{grid-template-columns:220px minmax(0,1fr)}
+.dev-space.agents-rail-collapsed{grid-template-columns:48px minmax(0,1fr)}
+.ds-spaces-sidebar{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--ds-chrome);border:1px solid var(--ds-border);border-radius:8px;padding:8px;overflow:hidden}
+.ds-spaces-heading{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:4px 5px;font-size:11px;color:var(--ds-muted);min-height:35px;flex-shrink:0}
+.ds-spaces-heading small{margin-left:5px;font-size:10px}
+.ds-spaces-list{overflow:auto;min-height:44px;max-height:45%;scrollbar-width:thin;padding-bottom:16px}
+.ds-space-group-heading{display:flex;align-items:center;margin:11px 0 4px;gap:2px}
+.ds-space-group-heading>button:first-child{min-width:0;flex:1;justify-content:flex-start;color:var(--ds-muted);font-size:10px;gap:5px}
+.ds-space-group-heading>button>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-space-row,.ds-space-agent-row{display:flex;align-items:center;border-radius:5px;min-width:0;gap:1px;margin:2px 0}
+.ds-space-row:hover,.ds-space-agent-row:hover{background:var(--ds-hover)}
+.ds-space-row.active,.ds-space-agent-row.active{background:var(--ds-selection)}
+.dev-space .ds-space-select{display:flex;align-items:center;gap:8px;text-align:left;padding:7px 5px;min-width:0;flex:1;justify-content:flex-start;background:none;font-size:12px}
+.ds-space-badge{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:23px;height:23px;border-radius:5px;background:var(--ds-surface);font-size:12px;font-weight:600}
+.ds-space-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-space-select small{color:var(--ds-muted);font-size:10px}
+.ds-space-edit,.ds-space-agent-move{opacity:1}
+.dev-space .ds-space-edit,.dev-space .ds-space-agent-move{color:var(--ds-muted)}
+.ds-space-row:hover .ds-space-edit,.ds-space-edit:focus-visible,.ds-space-agent-row:hover .ds-space-agent-move,.ds-space-agent-move:focus-visible{color:var(--ds-text)}
+.ds-space-agents{display:flex;flex:1;flex-direction:column;min-height:85px;margin-top:12px;border-top:1px solid var(--ds-border);padding-top:8px}
+.ds-space-context{margin:0 5px 8px!important;color:var(--ds-faint);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-space-agent-items{overflow:auto;scrollbar-width:thin;min-height:0;flex:1}
+.dev-space .ds-space-agent-row>.ds-agent-item{flex:1;min-width:0;background:none;padding:7px 4px;gap:7px}
+.ds-space-empty{padding:12px 6px;color:var(--ds-muted);font-size:11px;line-height:1.7}
+.ds-space-empty p{margin-bottom:6px}
+.ds-space-empty button{font-size:11px}
+.ds-spaces-footer{display:flex;align-items:center;gap:4px;border-top:1px solid var(--ds-border);padding-top:7px;margin-top:7px;min-height:36px;flex-shrink:0}
+.ds-local-status{flex:1;font-size:10px;color:var(--ds-muted)}
+.ds-spaces-sidebar.is-collapsed{padding:7px 3px}
+.is-collapsed .ds-spaces-heading{justify-content:center;padding:0}
+.is-collapsed .ds-spaces-heading>span,.is-collapsed .ds-space-name,.is-collapsed .ds-space-select>small,.is-collapsed .ds-space-edit,.is-collapsed .ds-space-group-heading,.is-collapsed .ds-agent-item-text,.is-collapsed .ds-space-agent-move,.is-collapsed .ds-local-status{display:none!important}
+.dev-space .is-collapsed .ds-space-select{padding:5px 0;justify-content:center}
+.is-collapsed .ds-spaces-footer{flex-direction:column}
+.ds-space-dialog .ds-form{display:flex;flex-direction:column;gap:15px}
+.ds-space-dialog .ds-form label{display:flex;flex-direction:column;gap:7px;font-size:12px}
+.ds-space-dialog .ds-form label>small{color:var(--ds-muted)}
+.ds-space-dialog .ds-form p{font-size:11px;line-height:1.7;margin:0}
+.ds-space-dialog .ds-form footer{display:flex;justify-content:flex-end;gap:8px}
+.ds-space-colors{border:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ds-space-colors legend{font-size:12px;margin-bottom:8px}
+.ds-space-colors>button{width:25px;height:25px;min-height:25px;border-radius:5px;padding:0;border:2px solid transparent}
+.ds-space-colors>button:first-of-type{width:auto;padding:0 5px;font-size:11px}
+.ds-space-colors>button[aria-pressed=true]{outline:2px solid var(--ds-text);outline-offset:2px}
+.ds-space-colors>input[type=color]{width:29px;height:29px;padding:2px;cursor:pointer}
+.ds-space-error{color:var(--ds-error)}
+.ds-space-delete-section{border-top:1px solid var(--ds-border);padding-top:15px;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.ds-space-dialog .ds-space-delete{display:inline-flex;align-items:center;gap:7px;color:var(--ds-error);border:1px solid var(--ds-input);border-radius:5px;padding:7px 10px;background:none;font:inherit;cursor:pointer}
+.ds-space-dialog .ds-space-delete:hover:not(:disabled){background:var(--ds-hover)}
+.ds-space-dialog .ds-space-delete:disabled{opacity:.45;cursor:default}
+.ds-space-delete-agents{font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.ds-space-delete-agents summary{cursor:pointer}
+.ds-space-delete-agents ul{max-height:150px;overflow:auto;padding-left:20px;margin:8px 0 0}
+.ds-space-dialog .ds-form footer{flex-wrap:wrap}
+.ds-workbench{position:relative}
+.ds-project-area{display:flex;flex:1;min-width:0;min-height:0;overflow:hidden}
+.ds-project-sidebar{width:190px;flex-shrink:0;border:0;border-right:1px solid var(--ds-border);border-radius:0;padding:8px;background:var(--ds-chrome)}
+.ds-project-sidebar .ds-project-switch{min-width:0;margin-bottom:10px}
+.ds-project-sidebar .ds-project-switch select{min-width:0;width:0}
+.project-nav-collapsed .ds-project-sidebar{width:48px;padding:7px 4px;align-items:center}
+.project-nav-collapsed .ds-project-sidebar .ds-sidebar-footer{justify-content:center;width:100%}
+.ds-project-area>.ds-canvas{border:0;border-radius:0;min-width:0;background:var(--ds-canvas)}
+.ds-project-sidebar .ds-collapsed-navigation{overflow:auto;min-height:0;width:100%}
+.ds-workbench>.ds-agent-pane{position:relative;inset:auto;min-width:320px;max-width:calc(100% - 450px);flex-shrink:0;box-shadow:none;border:0;border-radius:0}
+.ds-workbench>.ds-resizer{display:block;flex:0 0 8px}
+.agents-expanded .ds-project-area{display:none}
+.agents-expanded .ds-workbench>.ds-agent-pane{flex:1;max-width:none;width:auto!important;min-width:0}
+@media(max-width:1150px){
+ .dev-space{grid-template-columns:180px minmax(0,1fr)}
+ .dev-space.agents-rail-collapsed{grid-template-columns:48px minmax(0,1fr)}
+ .ds-workbench>.ds-agent-pane{position:absolute;left:0;right:auto;top:0;bottom:0;z-index:45;max-width:100%;min-width:0;width:100%!important;box-shadow:none}
+ .ds-workbench>.ds-resizer{display:none}
+ .dev-space:not(.agents-expanded) .ds-workbench:has(>.ds-agent-pane) .ds-project-area{visibility:hidden}
+ .agents-expanded .ds-workbench>.ds-agent-pane{position:relative;inset:auto;width:100%!important;box-shadow:none}
+ .ds-project-sidebar{width:180px}
+}
+@media(max-width:650px){
+ .dev-space{grid-template-columns:48px minmax(0,1fr)}
+ .ds-spaces-sidebar{padding:7px 3px}
+ .ds-spaces-heading{justify-content:center;padding:0}
+ .ds-spaces-heading>span,.ds-space-name,.ds-space-select>small,.ds-space-edit,.ds-space-group-heading,.ds-spaces-sidebar .ds-agent-item-text,.ds-space-agent-move,.ds-local-status,.ds-space-context,.ds-space-empty{display:none!important}
+ .dev-space .ds-space-select{padding:5px 0;justify-content:center}
+ .ds-spaces-footer{flex-direction:column}
+ .ds-project-sidebar{width:48px;padding:7px 3px}
+ .ds-project-sidebar .ds-navigation{display:flex!important}
+ .ds-project-sidebar .ds-navigation button{padding:5px;justify-content:center;font-size:0;min-height:33px}
+ .ds-project-sidebar .ds-navigation button>span,.ds-project-sidebar .ds-navigation button>small,.ds-project-sidebar .ds-nav-label,.ds-project-sidebar .ds-sidebar-footer>small,.ds-project-sidebar .ds-sidebar-footer>.ds-fill{display:none!important}
+ .ds-project-sidebar .ds-project-switch{margin-bottom:10px}
+ .ds-project-sidebar .ds-project-mark{width:28px}
+ .ds-project-sidebar .ds-navigation button svg{width:16px;height:16px}
+ .ds-project-sidebar .ds-sidebar-footer{justify-content:center}
+ .ds-space-group{display:block}
+ .ds-spaces-sidebar:not(.is-collapsed) .ds-space-group-heading{display:flex!important;justify-content:center}
+ .ds-spaces-sidebar .ds-space-group-heading>button:first-child{flex:0 0 28px;justify-content:center;padding:5px}
+ .ds-spaces-sidebar .ds-space-group-heading>button>span,.ds-spaces-sidebar .ds-space-group-heading>.ds-icon{display:none}
+}

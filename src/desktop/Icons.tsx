@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { topicIconCatalog } from './iconCatalog'
 import type { AgentId } from './types'
 import MakLogo from '../components/MakLogo'
 
@@ -32,5 +33,8 @@ export function Icon({ name, size = 18, style }: { name: string; size?: number; 
     down: 'm5 9 7 7 7-7', enter: 'M19 4v9H5m5-5-5 5 5 5', tab: 'M4 12h13m-5-5 5 5-5 5M20 5v14', escape: 'M14 4h6v16h-6M16 12H4m5-5-5 5 5 5', copy: 'M9 9h12v12H9ZM15 9V3H3v12h6', edit: 'M4 20h4L19 9l-4-4L4 16ZM13 7l4 4', trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
     history: 'M3 5v5h5M4 9a9 9 0 1 1 0 6M12 7v5l3 2', attach: 'm8 13 7-7a3 3 0 0 1 4 4L9 20a5 5 0 0 1-7-7L13 2M5 15l9-9', clean: 'm9 4 11 11M6 7l11 11-4 4L2 11ZM2 22h20',
   }
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true"><path d={paths[name] || paths.files} /></svg>
+  return <svg className="ds-ui-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">{name==='more'?[5,12,19].map(cx=><circle key={cx} cx={cx} cy={12} r={1.5} fill="currentColor" stroke="none"/>):<path d={paths[name] || topicIconCatalog.find(i=>i.id===name.replace(/^topic:/,''))?.path || paths.files} />}</svg>
+}
+export function TopicIcon({value,size=18}:{value?:string;size?:number}){
+  return value&&!value.startsWith('steel:')?<span className="ds-unicode-icon" aria-hidden="true" style={{fontSize:size}}>{value}</span>:<Icon name={value?'topic:'+value.slice(6):'folder'} size={size}/>
 }

@@ -1,5 +1,5 @@
 import { intlLocale, t, useLocale } from '../i18n/index.ts'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { api, pickFiles, reportError, speakDesktopText, transcribeDesktopAudio, uploadImage } from './client'
@@ -141,11 +141,21 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   }
   useLayoutEffect(() => { const box = scroller.current; if (box && follow.current) box.scrollTop = box.scrollHeight }, [messages.length, transcript, working])
   useEffect(() => { if (focused) input.current?.focus() }, [session.id, focused])
-  useLayoutEffect(() => {
+  const resizeComposer=useCallback(() => {
     const box = input.current
     if (!box) return
-    box.style.height = 'auto'; box.style.height = `${Math.min(box.scrollHeight, 260)}px`
-  }, [draft.text])
+    const limit=Math.max(36,Math.min(260,Math.floor((area.current?.clientHeight||740)*.35)))
+    box.style.height = '0px'
+    const height=box.scrollHeight
+    box.style.height = `${Math.min(height,limit)}px`
+    box.style.overflowY=height>limit?'auto':'hidden'
+  },[])
+  useLayoutEffect(resizeComposer,[draft.text,resizeComposer])
+  useEffect(()=>{
+    if(!area.current)return
+    const observer=new ResizeObserver(resizeComposer);observer.observe(area.current)
+    return()=>observer.disconnect()
+  },[resizeComposer])
 
   function addPaths(paths: string[]) {
     if (!paths.length) return

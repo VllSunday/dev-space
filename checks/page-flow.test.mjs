@@ -1,0 +1,54 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { DevSpace } from '../desktop/service/devspace.mjs';
+import { pageFlow, reconcileFlow, validateFlow } from '../desktop/service/page-flow.mjs';
+
+test('composition references live collections, old blocks and title without mutating a legacy page',()=>{
+ const page={layout:'wiki',blocks:[{id:'a',type:'image',asset:'workspace/devspace/assets/a.png'},{id:'b',type:'text',text:'Author text'}]},project={topics:[{id:'custom',name:'Custom'}]};
+ const snapshot=JSON.stringify(page),flow=pageFlow(page,project);
+ assert.deepEqual(flow.map(n=>n.type),['block','title','block','collection']);assert.equal(flow.at(-1).topicId,'custom');assert.equal(JSON.stringify(page),snapshot);
+ const ordered=[flow[0],flow[1],flow[3],flow[2]];
+ const next=reconcileFlow(ordered,page.blocks,[page.blocks[0],{id:'changed',type:'text',text:'Edited'}]);
+ assert.equal(next.at(-1).blockId,'changed');assert.equal(next[2].type,'collection');
+ assert.throws(()=>validateFlow([{id:'bad',type:'collection',topicId:'foreign',view:'list'}],page,project));
+ assert.throws(()=>validateFlow([{id:'bad',type:'block',blockId:'missing'}],page,project));
+});
+
+test('Wiki remains optional; custom composition, topic icons and description survive restart and undo',async()=>{
+ const repo=await mkdtemp(path.join(os.tmpdir(),'devspace-flow-')),store=await new DevSpace(repo).init();
+ const op=async value=>store.mutate({...value,baseRevision:(await store.read()).revision});
+ const projectId=(await store.read()).projects[0].id;
+ assert.equal((await store.read()).pages.length,0);
+ let state=await op({action:'create-topic',projectId,name:'A user topic'});const topicId=state.projects[0].topics[0].id;
+ assert.equal(state.pages.length,0);
+ state=await op({action:'create-page',projectId,title:'Home',layout:'wiki',blocks:[{id:'intro',type:'text',text:'Keep my words'}]});const pageId=state.pages[0].id;
+ state=await op({action:'project-home',projectId,pageId});
+ state=await op({action:'collection',id:pageId,topicId,view:'list',enabled:true});
+ const original=pageFlow(state.pages[0],state.projects[0]);
+ state=await op({action:'page-flow',id:pageId,expectedPageRevision:state.pages[0].revision,flow:[original[0],original[2],original[1]]});
+ state=await op({action:'block',id:pageId,flowIndex:2,block:{id:'between',type:'quote',text:'Text between sections'}});
+ assert.equal(state.pages[0].flow[2].blockId,'between');
+ state=await op({action:'create-material',projectId,topicId,text:'Source stays here'});const sourceId=state.materials[0].id;
+ state=await op({action:'collection',id:pageId,topicId,view:'list',pinId:sourceId,pinned:true});
+ assert.deepEqual(state.pages[0].flow.find(n=>n.type==='collection').pinnedIds,[sourceId]);
+ state=await op({action:'collection',id:pageId,topicId,view:'list',enabled:false});
+ assert.equal(state.materials.length,1);assert.equal(state.projects[0].topics.length,1);assert.equal(state.pages[0].flow.some(n=>n.type==='collection'),false);
+ state=await op({action:'undo'});assert.equal(state.pages[0].flow.some(n=>n.type==='collection'),true);
+ state=await op({action:'topic-icon',projectId,id:topicId,icon:'steel:game'});
+ state=await op({action:'topic-block',projectId,topicId,block:{id:'description',type:'text',text:'Topic description'}});
+ const reopened=await new DevSpace(repo).init(),saved=await reopened.read();assert.equal(saved.projects[0].topics[0].icon,'steel:game');assert.equal(saved.projects[0].topics[0].blocks[0].text,'Topic description');assert.equal(saved.pages[0].flow[2].blockId,'between');
+ state=await op({action:'topic-delete-block',projectId,topicId,blockId:'description'});
+ await assert.rejects(op({action:'topic-patch-block',projectId,topicId,blockId:'description',patch:{text:'Late flush'}}),e=>e.status===409);
+ assert.equal((await store.read()).projects[0].topics[0].blocks.length,0);
+ await assert.rejects(op({action:'page-flow',id:pageId,expectedPageRevision:0,flow:[]}),e=>e.status===409);
+ state=await op({action:'update-page',id:pageId,expectedPageRevision:saved.pages[0].revision,blocks:[{id:'intro',type:'text',text:'Keep my words'},{id:'replacement',type:'quote',text:'Changed note'}]});
+ assert.equal(state.pages[0].flow[2].blockId,'replacement');assert.equal(state.pages[0].flow.some(n=>n.type==='collection'),true);assert.equal(state.materials[0].text,'Source stays here');
+ const collection=state.pages[0].flow.find(n=>n.type==='collection');
+ state=await op({action:'page-flow',id:pageId,expectedPageRevision:state.pages[0].revision,flow:[...state.pages[0].flow,{...collection,id:'second-preview'}]});
+ state=await op({action:'collection',id:pageId,topicId,view:'list',pinId:sourceId,pinned:false});
+ assert.equal(state.pages[0].flow.filter(n=>n.type==='collection').length,2);
+ state=await op({action:'delete-topic',projectId,id:topicId});assert.equal(state.pages[0].flow.some(n=>n.type==='collection'),false);assert.equal(state.materials[0].topicId,'unfiled');
+});

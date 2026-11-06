@@ -13,11 +13,12 @@ try{
  const page=await context.newPage();await page.goto(service.urls.workspace);
  await page.getByRole('button',{name:'Посмотреть пример',exact:true}).click();
  await expect(page.locator('.ds-wiki h1')).toHaveText('Острова ветра · Wiki');
- await expect(page.locator('.ds-wiki nav button')).toHaveCount(6);
+ await expect(page.locator('.ds-wiki nav')).toHaveCount(0);
+ await expect(page.locator('.ds-navigation').getByRole('button',{name:'Главная',exact:true})).toHaveCount(1);
  await expect(page.locator('.ds-navigation')).toContainText('3D viewer · Ассеты');
  const first=JSON.parse(await readFile(path.join(repo,'workspace/devspace/space.json'),'utf8'));
  expect(first.projects).toHaveLength(2);expect(first.pages).toHaveLength(6);expect(first.materials).toHaveLength(12);expect(service.sessions.items.size).toBe(0);
- await page.locator('.ds-wiki nav').getByRole('button',{name:'Локации',exact:true}).click();await expect(page.locator('.ds-topic-record')).toHaveCount(4);
+ await page.locator('.ds-navigation').getByRole('button',{name:'Локации',exact:true}).click();await expect(page.locator('.ds-topic-record')).toHaveCount(4);
  await page.locator('.ds-navigation').getByRole('button',{name:'3D viewer · Ассеты',exact:true}).click();
  await expect(page.locator('.ds-model-viewer [role=status]')).toContainText('Вращение',{timeout:20000});
  await page.getByRole('button',{name:'Новый проект',exact:true}).click();

@@ -1,0 +1,32 @@
+/* The desktop shell owns its palette, including controls rendered in portals.
+   Saved report/CLI palettes and user-chosen tab colors remain independent. */
+body.devspace-shell{
+ --bg:var(--ds-chrome);--bg-deep:var(--ds-canvas);
+ --surface-solid:var(--ds-surface);--surface-1:var(--ds-surface);--surface-2:var(--ds-raised);--surface-3:var(--ds-raised);
+ --sidebar-glass:var(--ds-chrome);--topbar-glass:var(--ds-chrome);
+ --text:var(--ds-text);--text-bright:var(--ds-text);--text-dim:var(--ds-muted);--text-muted:var(--ds-faint);
+ --pink:var(--ds-accent);--pink-bright:var(--ds-accent);--purple:var(--ds-accent);
+ --pink-dim:color-mix(in srgb,var(--ds-accent) 18%,transparent);--purple-dim:var(--ds-selection);
+ --green:var(--ds-good);--amber:var(--ds-warning);--red:var(--ds-error);--blue:var(--ds-accent);
+ --hairline:var(--ds-border);--hairline-strong:var(--ds-input);--on-accent:var(--ds-chrome);
+ --edge:none;--edge-soft:none;--edge-amber:none;--glow-pink:none;--glow-pink-strong:none;--glow-amber:none;
+ --focus-ring:none;
+ background:var(--ds-chrome);color:var(--ds-text);accent-color:var(--ds-accent);color-scheme:dark
+}
+body.devspace-shell ::selection{background:color-mix(in srgb,var(--ds-accent) 24%,transparent);color:var(--ds-text)}
+body.devspace-shell :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;box-shadow:none}
+body.devspace-shell .sidebar-search input:focus,body.devspace-shell .c3d-select:hover{border-color:var(--ds-accent);box-shadow:none}
+body.devspace-shell :is(.ds-dialog,.ds-chat-dialog,.ds-block-menu,.ds-icon-picker,.agent-layout-menu,.tab-menu) :focus-visible{outline:2px solid var(--ds-accent);outline-offset:2px;box-shadow:none}
+/* Auto-focusing a chat must not draw a second rectangle inside its composer. */
+html body.devspace-shell .desktop-root .conversation-composer textarea:is(:focus,:focus-visible){outline:none;border:0;box-shadow:none}
+html body.devspace-shell .desktop-root .conversation-composer:focus-within{border-color:var(--ds-input);box-shadow:none}
+.ds-tools-overlay .skill-locations{display:flex;flex-direction:column;gap:10px;padding:10px 14px}
+.skill-provider-tabs,.skill-scope-tabs{display:flex;flex-wrap:wrap;gap:5px}
+.ds-tools-overlay .skill-locations button{font:11px var(--font-body);border:1px solid var(--ds-input);border-radius:5px;padding:6px 9px;color:var(--ds-muted);background:none}
+.ds-tools-overlay .skill-locations button[aria-pressed=true]{background:var(--ds-selection);color:var(--ds-text)}
+.skill-folder-choice{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ds-muted)}
+.skill-folder-choice select{flex:1;min-width:0;height:32px;font:11px var(--font-body);padding:4px 6px}
+.skill-folder-empty{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:20px 12px;color:var(--ds-muted);font-size:12px;line-height:1.7}
+.skill-folder-empty strong{color:var(--ds-text)}
+.skill-folder-empty code{font:10px/1.7 var(--font-mono);overflow-wrap:anywhere;max-width:100%}
+.skill-folder-empty button{border:1px solid var(--ds-input);font-size:11px}

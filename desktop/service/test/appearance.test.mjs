@@ -4,13 +4,22 @@ import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { palettes, themes, isThemePreference, resolveTheme, themePalette, themeVariables } from '../appearance.mjs';
 import { createService } from '../server.mjs';
-import { terminalTheme, terminalRoleColors, originalTheme, focusTheme } from '../../../src/desktop/terminalAppearance.ts';
+import { terminalTheme, terminalSurfaceTheme, terminalRoleColors, originalTheme, focusTheme } from '../../../src/desktop/terminalAppearance.ts';
 
 function luminance(hex) {
   const channels = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4);
   return channels[0] * .2126 + channels[1] * .7152 + channels[2] * .0722;
 }
 const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.min(luminance(a), luminance(b)) + .05);
+
+test('embedded graphite terminals preserve CLI ANSI colors and do not mutate the selected theme',()=>{
+ for(const appearance of ['original','focus']){
+  const base=terminalTheme(appearance,'dark'),before=structuredClone(base),embedded=terminalSurfaceTheme(base,'#131518');
+  assert.equal(embedded.background,'#131518');assert.equal(embedded.cursorAccent,'#131518');assert.ok(embedded.scrollbarSliderBackground);assert.ok(contrast(embedded.foreground,embedded.background)>=4.5);
+  for(const key of Object.keys(base).filter(key=>!['background','cursorAccent'].includes(key)))assert.deepEqual(embedded[key],base[key],key);
+  assert.deepEqual(base,before);
+ }
+});
 
 test('the ten approved variants match the study and preserve saved family IDs', async () => {
   const families = JSON.parse(await readFile(new URL('./fixtures/approved-theme-variants.json', import.meta.url), 'utf8'));

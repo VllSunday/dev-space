@@ -1,0 +1,26 @@
+.ds-navigation-appearance{width:min(460px,calc(100vw - 24px))}
+.ds-navigation-appearance .ds-form{display:flex;flex-direction:column;gap:18px}
+.ds-navigation-appearance label{display:flex;flex-direction:column;gap:8px;font-size:12px}
+.ds-navigation-appearance label select{width:100%;min-width:0}
+.ds-navigation-appearance p{margin:0;font-size:12px;line-height:1.7}
+.ds-navigation-appearance .ds-topic-icon-trigger{align-self:flex-start}
+.ds-nav-preview{display:flex;align-items:center;gap:9px;padding:12px;border-radius:5px;background:var(--ds-selection);font-size:13px;overflow-wrap:anywhere}
+.ds-nav-preview[data-nav-color]{background:var(--ds-nav-tint)}
+.ds-navigation-colors{border:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.ds-navigation-colors legend{font-size:12px;margin-bottom:10px}
+.ds-navigation-colors button{width:27px;height:27px;min-height:27px;border:2px solid transparent;border-radius:5px;padding:0}
+.ds-navigation-colors button:first-of-type{width:auto;padding:0 8px;background:var(--ds-surface);color:var(--ds-text);font-size:12px}
+.ds-navigation-colors button[aria-pressed=true]{outline:2px solid var(--ds-text);outline-offset:2px}
+.ds-nav-custom{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+.ds-nav-custom input{width:54px;height:32px;padding:2px}
+.ds-nav-custom button{min-height:32px;font-size:12px}
+.dev-space .ds-project-sidebar button[data-nav-color]{background:var(--ds-nav-tint);color:var(--ds-text)}
+.dev-space .ds-project-sidebar button[data-nav-color]:is(.active,[aria-pressed=true]){background:var(--ds-nav-active);box-shadow:inset 0 0 0 1px var(--ds-nav-edge)}
+.dev-space .ds-project-sidebar button[data-nav-color]:hover{background:var(--ds-nav-active)}
+.dev-space .ds-project-sidebar button[data-nav-color] small{color:inherit}
+.ds-project-sidebar .ds-navigation{gap:4px}
+.ds-page-title-row{display:flex;align-items:baseline;gap:12px;min-width:0}
+.ds-page-title-row>.ds-page-title{flex:1;min-width:0}
+.ds-page-title-row>:first-child:not(.ds-page-title){align-self:flex-start;margin-top:6px}
+.project-nav-collapsed .ds-project-sidebar .ds-sidebar-footer{flex-direction:column}
+@media(max-width:650px){.ds-project-sidebar .ds-sidebar-footer{flex-direction:column}}

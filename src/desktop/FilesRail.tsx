@@ -38,6 +38,9 @@ function RevealFolder({ path, name }: { path: string; name: string }) {
   useLocale()
   return <button className="file-reveal" title={t("Show {0} in {1}", name, t(fileManager))} aria-label={t("Show {0} in {1}", name, t(fileManager))} onClick={event => { event.stopPropagation(); api('/reveal', { path }).catch(reportError) }}><Icon name="external" size={14} /></button>
 }
+type SkillProvider='claude'|'codex'|'knowledge'|'processes'
+interface SkillLocation {id:string;provider:SkillProvider;scope:'personal'|'project';label:string;path:string;exists:boolean}
+
 type TreeControls = {
   expanded: Set<string>; selected: string; dropTarget: string; query: string; revision: number
   toggle: (path: string) => void
@@ -108,12 +111,14 @@ function treeKeys(event: KeyboardEvent<HTMLDivElement>) {
   rows[Math.max(0, Math.min(rows.length - 1, next))]?.focus()
 }
 
-export default function FilesRail({ embedded = false, onClose }: { embedded?: boolean; onClose?: () => void } = {}) {
+export default function FilesRail({ embedded = false, onClose, projectId }: { embedded?: boolean; onClose?: () => void; projectId?: string } = {}) {
   useLocale()
   const { repo } = useDesktop()
   const storageKey = `mrmak.files.${pathKey(repo)}`
   const [open, setOpen] = useState(() => embedded || localStorage.getItem(`${storageKey}.open`) === 'true')
   const [panel, setPanel] = useState<'files' | 'skills' | 'mcp' | 'settings'>('files')
+  const [skillFolders,setSkillFolders]=useState<SkillLocation[]>([]),[skillProvider,setSkillProvider]=useState<SkillProvider>('claude'),[skillScope,setSkillScope]=useState<'personal'|'project'>('personal')
+  const [skillsKey,setSkillsKey]=useState(''),[skillsError,setSkillsError]=useState(''),skillChoice=useRef('')
   const [root, setRoot] = useState(repo)
   const [typedPath, setTypedPath] = useState(repo)
   const [rootFolder, setRootFolder] = useState<Folder | null>(null)
@@ -168,13 +173,34 @@ export default function FilesRail({ embedded = false, onClose }: { embedded?: bo
     window.addEventListener('mrmak-recycle-result', recycled)
     return () => { window.removeEventListener('mrmak-native-drag-result', complete); window.removeEventListener('mrmak-recycle-result', recycled) }
   }, [refresh])
-  const navigate = (path: string) => { setRoot(path); setTypedPath(path); setSelected(path); setDestination(path); if (pathKey(path) !== pathKey(root)) setRootFolder(null); setQuery(''); setError('') }
+  const navigate = useCallback((path: string) => { setRoot(path); setTypedPath(path); setSelected(path); setDestination(path); setRootFolder(folder=>folder&&pathKey(folder.path)===pathKey(path)?folder:null); setQuery(''); setError('') },[])
   const showPanel = (next: 'files' | 'skills' | 'mcp' | 'settings') => {
     if (!embedded && open && panel === next) { setOpen(false); return }
-    if (next === 'skills') { setMode('all'); navigate(`${repo}/.claude/skills`) }
+    if (next === 'skills') { setSkillsError(''); setMode('all'); if(panel!=='skills')skillChoice.current='' }
     if (next === 'files' && panel !== 'files') { setMode('main'); navigate(repo) }
     setPanel(next); setOpen(true)
   }
+  const chooseSkills=(provider:SkillProvider,scope:SkillLocation['scope']=skillScope)=>{
+    const effectiveScope=['knowledge','processes'].includes(provider)?'project':scope
+    setSkillProvider(provider);setSkillScope(effectiveScope);setSkillsError('');setMode('all')
+    const choices=skillFolders.filter(item=>item.provider===provider&&item.scope===effectiveScope),choice=choices.find(item=>item.exists)||choices[0]
+    if(choice){skillChoice.current=(projectId||repo)+':'+provider+':'+effectiveScope;navigate(choice.path)}
+  }
+  useEffect(()=>{
+    if(panel!=='skills')return
+    let alive=true;const requestKey=(projectId||repo)+':'+skillProvider+':'+skillScope
+    void api<SkillLocation[]>('/skill-locations'+(projectId?'?projectId='+encodeURIComponent(projectId):'')).then(folders=>{
+      if(!alive)return
+      setSkillFolders(folders);setSkillsKey(requestKey);setSkillsError('')
+      const key=(projectId||repo)+':'+skillProvider+':'+skillScope,choices=folders.filter(item=>item.provider===skillProvider&&item.scope===skillScope),choice=choices.find(item=>item.exists)||choices[0]
+      if(choice&&skillChoice.current!==key){skillChoice.current=key;navigate(choice.path)}
+    }).catch(error=>{if(alive){setSkillsError(message(error));setSkillsKey(requestKey)}})
+    return()=>{alive=false}
+  },[panel,skillProvider,skillScope,revision,repo,projectId,navigate])
+  const skillChoices=skillFolders.filter(item=>item.provider===skillProvider&&item.scope===skillScope)
+  const selectedSkill=panel==='skills'?skillFolders.find(item=>pathKey(item.path)===pathKey(root)):undefined
+  const skillMissing=!!selectedSkill&&!selectedSkill.exists
+  const skillLoading=panel==='skills'&&skillsKey!==(projectId||repo)+':'+skillProvider+':'+skillScope
   const collapse = () => { if (embedded) onClose?.(); else setOpen(false) }
   const toggle = (path: string) => {
     setSelected(path); setDestination(path)
@@ -256,19 +282,27 @@ export default function FilesRail({ embedded = false, onClose }: { embedded?: bo
     {open && panel === 'settings' && <WorkspaceSettings onClose={collapse} />}
     {open && panel === 'mcp' && <McpPanel onClose={collapse} />}
     {open && (panel === 'files' || panel === 'skills') && <div className="files-panel"><header><h2>{panel === 'skills' ? t("Skills") : t("Files")}</h2><div>
-      <button className="desk-icon" disabled={copying} onClick={() => input.current?.click()} title={t("Copy files into {0}", fileName(destination))} aria-label={t("Add files")}><Icon name="plus" size={16} /></button>
+      <button className="desk-icon" disabled={copying||panel==='skills'&&(skillMissing||skillLoading)} onClick={() => input.current?.click()} title={t("Copy files into {0}", fileName(destination))} aria-label={t("Add files")}><Icon name="plus" size={16} /></button>
       <button className="desk-icon" onClick={refresh} title={t("Refresh files")}><Icon name="refresh" size={15} /></button><button className="desk-icon" onClick={collapse} title={t("Collapse files")}><Icon name="close" size={17} /></button>
     </div></header>
       <input ref={input} type="file" multiple hidden onChange={event => { void copy(Array.from(event.target.files || []), destination); event.target.value = '' }} />
       {panel === 'files' ? <><div className="file-mode"><button className={mode === 'main' ? 'selected' : ''} onClick={() => { setMode('main'); navigate(repo) }}>{t("Main folders")}</button><button className={mode === 'all' ? 'selected' : ''} onClick={() => setMode('all')}>{t("All files")}</button></div>
-      <div className="file-shortcuts">{['inbox', 'projects', 'workspace', 'knowledge', 'processes'].map(name => <button key={name} {...dropProps(`${repo}/${name}`)} className={dropTarget === pathKey(`${repo}/${name}`) ? 'drop-target' : ''} onClick={() => { navigate(repo); const path = `${repo}/${name}`; setExpanded(current => new Set([...current, pathKey(path)])); setSelected(path); setDestination(path) }}><Icon name="folder" size={14} />{name}</button>)}</div></> : <div className="skill-locations">{[['Claude', '.claude/skills'], ['Codex', '.agents/skills'], [t("Knowledge"), 'knowledge'], [t("Processes"), 'processes']].map(([label, path]) => <button key={path} aria-pressed={pathKey(root) === pathKey(`${repo}/${path}`)} onClick={() => { setMode('all'); navigate(`${repo}/${path}`) }}>{label}</button>)}<p>{t("Project skills · open a SKILL.md to read or edit.")}</p></div>}
+      <div className="file-shortcuts">{['inbox', 'projects', 'workspace', 'knowledge', 'processes'].map(name => <button key={name} {...dropProps(`${repo}/${name}`)} className={dropTarget === pathKey(`${repo}/${name}`) ? 'drop-target' : ''} onClick={() => { navigate(repo); const path = `${repo}/${name}`; setExpanded(current => new Set([...current, pathKey(path)])); setSelected(path); setDestination(path) }}><Icon name="folder" size={14} />{name}</button>)}</div></> : <div className="skill-locations">
+        <div className="skill-provider-tabs">{([['Claude','claude'],['Codex','codex'],[t("Knowledge"),'knowledge'],[t("Processes"),'processes']] as const).map(([label,provider])=><button key={provider} aria-pressed={skillProvider===provider} onClick={()=>chooseSkills(provider)}>{label}</button>)}</div>
+        {['claude','codex'].includes(skillProvider)&&<div className="skill-scope-tabs" role="group" aria-label="Область навыков">{(['personal','project'] as const).map(scope=><button key={scope} aria-pressed={skillScope===scope} onClick={()=>chooseSkills(skillProvider,scope)}>{scope==='personal'?'Личные':'Проект'}</button>)}</div>}
+        {skillChoices.length>1&&<label className="skill-folder-choice">Папка<select aria-label="Папка навыков" value={selectedSkill?.id||''} onChange={event=>{const choice=skillFolders.find(item=>item.id===event.target.value);if(choice)navigate(choice.path)}}><option value="" disabled>Выберите папку</option>{skillChoices.map(item=><option key={item.id} value={item.id}>{item.label}{item.exists?'':' · не создана'}</option>)}</select></label>}
+        <p>{skillProvider==='knowledge'||skillProvider==='processes'?'Материалы рабочей области.':skillScope==='personal'?'Навыки пользователя. Откройте SKILL.md для просмотра или редактирования.':'Навыки проекта. Откройте SKILL.md для просмотра или редактирования.'}</p>
+      </div>}
       <form className="file-path" onSubmit={event => { event.preventDefault(); setMode('all'); navigate(typedPath) }}><button type="button" title={t("Parent folder")} onClick={() => { setMode('all'); navigate(rootFolder?.parent || repo) }}><Icon name="up" size={15} /></button><input value={typedPath} onChange={event => setTypedPath(event.target.value)} spellCheck={false} aria-label={t("Folder path")} /><button type="submit" title={t("Open folder")}><Icon name="arrow" size={14} /></button></form>
       <div className="file-filter"><Icon name="search" size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Filter file names…")} aria-label={t("Filter file names in expanded folders")} /></div>
-      <div className={`file-list ${dropTarget === pathKey(destination) ? 'drop-area' : ''}`} role="tree" aria-label={t("Folder tree")} onKeyDown={deleteKey} {...dropProps(destination)}>
+      <div className={`file-list ${dropTarget === pathKey(destination) ? 'drop-area' : ''}`} role="tree" aria-label={t("Folder tree")} onKeyDown={deleteKey} {...(skillMissing||skillLoading?{}:dropProps(destination))}>
+        {panel==='skills'&&(skillsError||skillLoading)?<p className="file-tree-note" role="status">{skillsError||'Загружаем папки навыков…'}</p>:skillMissing?<div className="skill-folder-empty" role="status"><Icon name="skills" size={26}/><strong>Папка пока не создана</strong><p>В этом расположении ещё нет навыков. Выберите другую папку или добавьте сюда папку навыка с файлом SKILL.md через проводник.</p><code>{root}</code><button onClick={refresh}>Проверить снова</button></div>:<>
         <div role="none" className="file-entry has-reveal" {...dropProps(root)}><button role="treeitem" aria-level={1} aria-expanded="true" aria-selected={pathKey(selected) === pathKey(root)} className={`file-row file-root-row ${dropTarget === pathKey(root) ? 'drop-target' : ''}`} onClick={() => { setSelected(root); setDestination(root) }} {...dropProps(root)} title={root}><Icon name="arrow" size={11} style={{ transform: 'rotate(90deg)' }} /><Icon name="folder" size={15} /><span>{pathKey(root) === pathKey(repo) ? 'Dev Space' : fileName(root)}</span></button><RevealFolder path={root} name={pathKey(root) === pathKey(repo) ? 'Dev Space' : fileName(root)} /></div>
         <FolderBranch key={`${root}:${mode}`} path={root} mode={mode} tree={tree} onLoad={loaded} />
+        </>}
+
       </div>
-      <div className="file-transfer-status" aria-live="polite">{error && <p className="desk-error-inline">{t(error)}</p>}{status && <p>{status}</p>}<small title={destination}>{copying ? t("Transferring files…") : t("Drag to move · {0} to {1}", isMac ? '⌘⌫' : 'Delete', t(trashName))}</small></div>
+      <div className="file-transfer-status" aria-live="polite">{error && <p className="desk-error-inline">{t(error)}</p>}{status && <p>{status}</p>}<small title={destination}>{skillMissing?'Выберите существующую папку для добавления файлов':skillLoading?'Загрузка папок…':copying ? t("Transferring files…") : t("Drag to move · {0} to {1}", isMac ? '⌘⌫' : 'Delete', t(trashName))}</small></div>
       <footer><button onClick={() => navigate(repo)}>{t("Dev Space root")}</button></footer>
     </div>}
     {!embedded&&<div className="files-rail">{(['files', 'skills', 'mcp', 'settings'] as const).map(name => <button key={name} className={`rail-tool ${open && panel === name ? 'active' : ''}`} onClick={() => showPanel(name)} title={name === 'mcp' ? 'MCP' : t(name[0].toUpperCase() + name.slice(1))} aria-label={t(`Toggle ${name}`)} aria-pressed={open && panel === name}><Icon name={name === 'files' ? 'folder' : name} size={18} /><span>{name === 'mcp' ? 'MCP' : t(name[0].toUpperCase() + name.slice(1))}</span></button>)}<button className="rail-tool" title={t("Workspace help")} aria-label={t("Open Workspace help")} onClick={() => api<Preview>(`/preview?path=workspace%2F_shared%2Fhelp${getLocale() === 'ru' ? '.ru' : ''}.md`).then(setPreview).catch(reportError)}><Icon name="help" size={18} /><span>{t("Help")}</span></button><div className="rail-spacer" /><button className="desk-icon" title={t("Show Chats")} onClick={() => windowAction('chats')}><Icon name="chats" size={18} /></button></div>}

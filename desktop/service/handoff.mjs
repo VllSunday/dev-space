@@ -58,8 +58,8 @@ export class Handoffs {
       initialPrompt: `Continue the work from the previous chat '${session.name.replace(/"/g, "'")}'. First read its handoff: \`${file}\`. Then state the next step in one sentence and continue.`,
       readDir: folder,
     });
+    await this.opened(next.id,id);
     this.update(id, { status: 'done', sessionId: next.id });
-    this.opened(next.id);
   }
   completed(id, baseline) {
     return new Promise((resolve, reject) => {
