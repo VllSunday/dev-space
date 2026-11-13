@@ -1,0 +1,7 @@
+{
+  "plugin": 1, "id": "progress", "name": "Прогресс", "version": "0.1.0", "author": "Dev Space",
+  "description": "Показывает, какая часть задач зоны готова: кольцо и три числа. Пример вида со своим кодом — он работает в песочнице.",
+  "views": [
+    { "id": "ring", "title": "Кольцо прогресса", "level": "zone", "accepts": ["task"], "actions": ["thing.open"], "render": { "type": "code", "entry": "view.html" } }
+  ]
+}

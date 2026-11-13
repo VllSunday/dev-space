@@ -1,0 +1,7 @@
+{
+  "plugin": 1, "id": "blueprint", "name": "Чертёж", "version": "0.1.0", "author": "Dev Space",
+  "description": "Меняет саму доску: фон в клетку, зоны контуром и линии между зонами, у которых есть общие вещи.",
+  "boards": [
+    { "id": "sheet", "title": "Чертёж со связями", "description": "Клетка, контурные зоны и линии между связанными зонами.", "layout": "free", "links": true, "look": { "background": "grid", "zone": "outline", "density": "cozy", "accent": "#7fb0a8" } }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "plugin": 1, "id": "linear", "name": "Linear", "version": "0.1.0", "author": "Dev Space",
+  "homepage": "https://linear.app/developers/graphql",
+  "description": "Задачи Linear на доске и во флоу. Играет роль «Трекер задач», поэтому флоу для трекера работают с ним без переделки.",
+  "views": [
+    { "id": "issues", "title": "Таблица Linear", "level": "zone", "accepts": ["task"], "actions": ["thing.open", "thing.status"], "render": { "type": "parts", "parts": [
+      { "part": "counter", "counters": [{ "title": "Всего" }, { "title": "В работе", "where": { "field": "statusGroup", "equals": "doing" } }, { "title": "Готово", "where": { "field": "statusGroup", "equals": "done" } }] },
+      { "part": "table", "columns": [{ "field": "key", "title": "№" }, { "field": "title", "title": "Задача" }, { "field": "status", "title": "Статус" }, { "field": "assignee", "title": "Кто" }] }
+    ] } }
+  ],
+  "connections": [
+    {
+      "id": "issues", "title": "Задачи Linear", "description": "Задачи одной команды Linear.", "itemKind": "task",
+      "hosts": ["api.linear.app"],
+      "auth": { "type": "header", "header": "Authorization", "label": "Личный ключ API Linear", "help": "Linear → Settings → Security & access → Personal API keys." },
+      "settings": [{ "id": "team", "title": "Ключ команды", "placeholder": "ENG", "required": true }],
+      "operations": {
+        "list": {
+          "kind": "read", "title": "задачи команды",
+          "request": { "method": "POST", "url": "https://api.linear.app/graphql", "body": {
+            "query": "query($team: String!) { issues(filter: { team: { key: { eq: $team } } }, first: 100, orderBy: updatedAt) { nodes { id identifier title description url updatedAt state { name type } assignee { name } } } }",
+            "variables": { "team": "{{setting.team}}" } } },
+          "items": "data.issues.nodes",
+          "map": { "id": "id", "key": "identifier", "title": "title", "text": "description", "url": "url", "updated": "updatedAt", "status": "state.name", "assignee": "assignee.name",
+            "statusGroup": { "path": "state.type", "values": { "triage": "todo", "backlog": "todo", "unstarted": "todo", "started": "doing", "completed": "done", "canceled": "done" } } }
+        },
+        "states": {
+          "kind": "read", "title": "статусы команды",
+          "request": { "method": "POST", "url": "https://api.linear.app/graphql", "body": {
+            "query": "query($team: String!) { workflowStates(filter: { team: { key: { eq: $team } } }, first: 50) { nodes { id name type position } } }",
+            "variables": { "team": "{{setting.team}}" } } },
+          "items": "data.workflowStates.nodes",
+          "map": { "id": "id", "title": "name", "status": "name", "statusGroup": { "path": "type", "values": { "unstarted": "todo", "started": "doing", "completed": "done" } } }
+        },
+        "setStatus": {
+          "kind": "action", "title": "сменить статус задачи",
+          "params": { "id": { "title": "задача", "required": true }, "status": { "title": "группа статуса", "required": true } },
+          "lookup": { "stateId": { "operation": "states", "where": { "statusGroup": "{{param.status}}" }, "take": "id" } },
+          "request": { "method": "POST", "url": "https://api.linear.app/graphql", "body": {
+            "query": "mutation($id: String!, $stateId: String!) { issueUpdate(id: $id, input: { stateId: $stateId }) { success issue { id state { name type } } } }",
+            "variables": { "id": "{{param.id}}", "stateId": "{{param.stateId}}" } } },
+          "result": "data.issueUpdate.success"
+        },
+        "comment": {
+          "kind": "action", "title": "оставить комментарий",
+          "params": { "id": { "title": "задача", "required": true }, "text": { "title": "текст", "required": true } },
+          "request": { "method": "POST", "url": "https://api.linear.app/graphql", "body": {
+            "query": "mutation($id: String!, $body: String!) { commentCreate(input: { issueId: $id, body: $body }) { success } }",
+            "variables": { "id": "{{param.id}}", "body": "{{param.text}}" } } },
+          "result": "data.commentCreate.success"
+        }
+      },
+      "plays": { "role": "tracker", "version": 1, "operations": { "list": "list", "setStatus": "setStatus", "comment": "comment" }, "statuses": { "todo": "Todo", "doing": "In Progress", "done": "Done" } }
+    }
+  ],
+  "instructions": ["agents.md"]
+}
