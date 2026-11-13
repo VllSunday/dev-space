@@ -82,3 +82,11 @@
 .dev-space .pv .pv-move button{padding:0 6px;white-space:nowrap}
 .dev-space .pv .pv-more{padding:2px 6px}.dev-space .pv .pv-more:hover{background:var(--ds-hover)}
 .dev-space .pv .pv-outline button{padding:4px 6px}.dev-space .pv .pv-outline button:hover{background:var(--ds-hover)}
+/* A view lives in zones of very different widths; parts adapt to the zone, not the window. */
+.dev-space .pv{container-type:inline-size}
+.dev-space .pv .pv-kcard b{overflow-wrap:break-word;hyphens:auto}
+@container (max-width:430px){
+.dev-space .pv-columns{grid-template-columns:minmax(0,1fr)!important}
+.dev-space .pv-columns section{min-height:0;padding:6px 7px}
+.dev-space .pv-counter div{padding:5px 9px}.dev-space .pv-counter b{font-size:17px}
+}

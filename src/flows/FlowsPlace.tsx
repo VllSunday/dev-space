@@ -16,9 +16,9 @@ const serialize = (flow: Flow) => JSON.stringify({
 }, null, 2)
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count % 10 === 1 && count % 100 !== 11 ? one : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? few : many}`
 
-function ParamField({ name, param, value, flow, block, change }: { name: string; param: BlockParam; value: unknown; flow: Flow; block: BlockInfo; change: (value: unknown) => void }) {
+function ParamField({ name, param, value, flow, block, change, roleTitles }: { name: string; param: BlockParam; value: unknown; flow: Flow; block: BlockInfo; change: (value: unknown) => void; roleTitles: Record<string, string> }) {
   const label = param.title || name, labels = block.labels[name] || {}
-  const options = param.type === 'role' ? Object.entries(flow.roles).map(([id, role]) => [id, role.title]) : param.type === 'need' ? Object.keys(flow.needs).map(id => [id, id]) : param.type === 'step' ? Object.entries(flow.steps).map(([id, step]) => [id, step.title || id]) : param.type === 'enum' ? (param.values || []).map(item => [item, labels[item] || item]) : null
+  const options = param.type === 'role' ? Object.entries(flow.roles).map(([id, role]) => [id, role.title]) : param.type === 'need' ? Object.entries(flow.needs).map(([id, need]) => [id, roleTitles[need.role] || id]) : param.type === 'step' ? Object.entries(flow.steps).map(([id, step]) => [id, step.title || id]) : param.type === 'enum' ? (param.values || []).map(item => [item, labels[item] || item]) : null
   return <label className="fl-row"><span>{label}{param.required && <i aria-hidden="true">*</i>}</span>
     {options ? <select value={String(value ?? '')} onChange={event => change(event.target.value || undefined)} aria-label={label}>{(!param.required || value === undefined) && <option value="">—</option>}{options.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select>
       : param.type === 'number' ? <input type="number" min={param.min} max={param.max} value={value === undefined ? '' : Number(value)} onChange={event => change(event.target.value === '' ? undefined : Number(event.target.value))} aria-label={label} />
@@ -26,13 +26,13 @@ function ParamField({ name, param, value, flow, block, change }: { name: string;
   </label>
 }
 
-function StepCard({ id, step, flow, blocks, problems, change, remove }: { id: string; step: FlowStep; flow: Flow; blocks: BlockInfo[]; problems: FlowProblem[]; change: (step: FlowStep) => void; remove?: () => void }) {
+function StepCard({ id, step, flow, blocks, problems, change, remove, roleTitles }: { id: string; step: FlowStep; flow: Flow; blocks: BlockInfo[]; problems: FlowProblem[]; change: (step: FlowStep) => void; remove?: () => void; roleTitles: Record<string, string> }) {
   const block = blocks.find(item => item.id === step.block)
-  const targets = [...Object.entries(flow.steps).filter(([other]) => other !== id || true).map(([other, item]) => [other, item.title || blocks.find(entry => entry.id === item.block)?.title || other]), ...Object.entries(terminalNames)]
+  const targets = [...Object.entries(flow.steps).map(([other, item]) => [other, item.title || blocks.find(entry => entry.id === item.block)?.title || other]), ...Object.entries(terminalNames)]
   if (!block) return <article className="fl-step missing"><header><b>{step.title || id}</b><small>блок «{step.block}» не найден</small></header></article>
   return <article className={'fl-step' + (problems.length ? ' bad' : '')} data-step={id}>
     <header><span className="fl-step-icon"><Icon name={blockIcon[block.base || block.id] || 'mcp'} size={15} /></span><b>{step.title || block.title}</b><small>{block.summary}</small>{block.plugin && <em>{block.plugin}</em>}<span className="fl-fill" />{flow.start === id && <em>начало</em>}{remove && <button type="button" className="ds-icon" aria-label={'Удалить шаг ' + (step.title || block.title)} title="Удалить шаг" onClick={remove}><Icon name="trash" size={13} /></button>}</header>
-    {Object.entries(block.params).map(([name, param]) => (step.with[name] !== undefined || param.required || param.type !== 'text' || name === 'task' || name === 'question') && <ParamField key={name} name={name} param={param} value={step.with[name]} flow={flow} block={block} change={value => { const next = { ...step.with }; if (value === undefined) delete next[name]; else next[name] = value; change({ ...step, with: next }) }} />)}
+    {Object.entries(block.params).map(([name, param]) => (step.with[name] !== undefined || param.required || param.type !== 'text' || name === 'task' || name === 'question') && <ParamField key={name} roleTitles={roleTitles} name={name} param={param} value={step.with[name]} flow={flow} block={block} change={value => { const next = { ...step.with }; if (value === undefined) delete next[name]; else next[name] = value; change({ ...step, with: next }) }} />)}
     {block.outputs.map(output => <div className="fl-row fl-out" key={output.id}><span>{output.title}</span>
       <select value={step.next[output.id] || ''} onChange={event => change({ ...step, next: { ...step.next, [output.id]: event.target.value } })} aria-label={'Куда ведёт выход ' + output.title}>{!step.next[output.id] && <option value="">— выберите —</option>}{targets.map(([target, title]) => <option key={target} value={target}>{target.startsWith('@') ? '◦ ' : '→ '}{title}</option>)}</select>
       {flow.steps[step.next[output.id]] && <label className="fl-limit" title="Сколько раз можно пройти этим переходом. Нужен, если переход возвращает назад.">не больше<input type="number" min={0} max={50} placeholder="—" value={step.limit[output.id] ?? ''} onChange={event => { const next = { ...step.limit }; if (event.target.value === '') delete next[output.id]; else next[output.id] = Number(event.target.value); change({ ...step, limit: next }) }} aria-label={'Предел возвратов для выхода ' + output.title} />раз</label>}
@@ -99,7 +99,7 @@ export default function FlowsPlace({ flows, plugins, focus, launch, notify }: { 
         <div className="fl-body">
           {mode === 'text' ? <textarea className="fl-text" value={text} onChange={event => setText(event.target.value)} spellCheck={false} aria-label="Текст флоу" />
             : <div className="fl-chain">
-              {(current?.order.length ? current.order : Object.keys(flow.steps)).map(id => flow.steps[id] && <StepCard key={id} id={id} step={flow.steps[id]} flow={flow} blocks={flows.blocks} problems={stepProblems(id)} change={step => edit(draft => { draft.steps[id] = step })} remove={flow.start === id ? undefined : () => edit(draft => { delete draft.steps[id] })} />)}
+              {(current?.order.length ? current.order : Object.keys(flow.steps)).map(id => flow.steps[id] && <StepCard key={id} roleTitles={Object.fromEntries(plugins.roles.map(role => [role.id, role.title]))} id={id} step={flow.steps[id]} flow={flow} blocks={flows.blocks} problems={stepProblems(id)} change={step => edit(draft => { draft.steps[id] = step })} remove={flow.start === id ? undefined : () => edit(draft => { delete draft.steps[id] })} />)}
               <div className="fl-add"><select value={adding} onChange={event => { if (event.target.value) addStep(event.target.value); setAdding('') }} aria-label="Добавить шаг"><option value="">＋ Добавить шаг…</option>{flows.blocks.map(block => <option key={block.id} value={block.id}>{block.title} — {block.summary}{block.plugin ? ' · ' + block.plugin : ''}</option>)}</select></div>
             </div>}
         </div>

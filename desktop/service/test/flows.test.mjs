@@ -77,6 +77,7 @@ test('materials → page: the agent hands in by command, code checks the result,
     assert.match(terminal, /refused: devspace: У шага «Работа» нет выхода «approve»\. Допустимые: done, blocked\./, 'an output the block does not have is refused');
     assert.match(terminal, /refused: devspace: Шаг не принят\. Укажи файл предложения/, 'a hand-in without the result is refused by code');
     assert.match(terminal, /accepted: Шаг «Работа» принят: дальше шаг «Мне»/);
+    assert.doesNotMatch(terminal, /got remarks/, 'a first visit is not presented as returned work');
     assert.equal((await service.devspace.read()).pages.length, state.pages.length, 'nothing is applied before the person decides');
     // The proposal lies on the board as a proposal until then.
     assert.ok((await service.devspace.proposals()).some(item => item.id === 'stub-page'));
@@ -153,6 +154,28 @@ test('the same flow works with Linear, and text from the tracker reaches the age
     assert.deepEqual(calls.filter(call => call.query.includes('issueUpdate')).map(call => call.variables.stateId), ['st-progress', 'st-done']);
     assert.ok(!JSON.stringify(service.flows.list()).includes('lin_api_key') && !(await screen(waiting.roles.author.sessionId)).includes('lin_api_key'), 'the key reaches neither the run nor the agent');
   } finally { process.env.DEVSPACE_STUB_MODE = ''; await service.close(); }
+});
+
+test('a plugin adds a block that flows can use at once, without touching the engine', async () => {
+  const calls = [], pluginFetch = async (url, options) => { calls.push(JSON.parse(options.body)); return { ok: true, status: 200, text: async () => JSON.stringify(await fixture(calls.at(-1).query.includes('commentCreate') ? 'comment-create' : 'issues')) }; };
+  const { service, project, settle } = await start({ pluginFetch });
+  try {
+    const flow = { flow: 1, id: 'note-in-tracker', name: 'Отметить в трекере', needs: { tracker: { role: 'tracker' } }, limits: { handoffs: 2 }, start: 'take', steps: {
+      take: { block: 'input', with: { from: 'tracker', need: 'tracker' }, next: { taken: 'say', empty: '@stopped' } },
+      say: { block: 'linear/comment', with: { need: 'tracker', text: 'Взято в работу агентами Dev Space.' }, next: { ok: '@done', failed: '@person' } } } };
+    assert.match((await service.flows.save('note-in-tracker', JSON.stringify(flow))).problems[0].text, /блок «linear\/comment» не найден\. Возможно, удалён плагин/);
+    await service.plugins.install((await service.plugins.inspect('catalog:linear')).ticket);
+    await service.operations.configure('linear-issues', { settings: { team: 'ENG' }, secret: 'k' });
+    const block = service.flows.describeBlocks().find(item => item.id === 'linear/comment');
+    assert.deepEqual([block.title, block.plugin, block.base, Object.keys(block.params)], ['Комментарий в трекер', 'Linear', 'action', ['need', 'text']]);
+    assert.equal((await service.flows.get('note-in-tracker')).ok, true);
+    assert.match(await service.commands.run('help', {}, {}), /Комментарий в трекер/, 'the reference for agents lists the new block');
+    const wrong = structuredClone(flow); delete wrong.steps.say.with.text;
+    assert.match(service.flows.validate(wrong).problems[0].text, /не задан параметр «Текст комментария»/);
+    const run = await service.flows.launch({ flowId: 'note-in-tracker', projectId: project.id, needs: { tracker: 'linear-issues' } });
+    assert.equal((await settle(run.id)).status, 'done');
+    assert.deepEqual(calls.at(-1).variables, { id: '9f1c2a50-3d1b-4c1e-9a55-1a2b3c4d5e02', body: 'Взято в работу агентами Dev Space.' });
+  } finally { await service.close(); }
 });
 
 test('a plugin made by words is checked by code, shown with its rights and installed on accept', async () => {

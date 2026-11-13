@@ -152,6 +152,7 @@ export class Flows extends EventEmitter {
       run, flow: run.flow, stepId, step, block, paths: this.paths,
       params: block.resolve ? block.resolve(step.with) : step.with,
       state: run.state[stepId] ||= {},
+      again: !!run.results[stepId],
       came: run.path.at(-1) ? { from: run.path.at(-1).step, output: run.path.at(-1).output, summary: run.path.at(-1).summary, kind: this.blocks().get(run.flow.steps[run.path.at(-1).step]?.block)?.person ? 'person' : 'step' } : null,
       title: id => engine.title(run, id),
       connectionTitle: need => engine.operations.list().find(item => item.id === run.needs[need])?.title || need,

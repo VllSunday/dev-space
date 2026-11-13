@@ -180,3 +180,4 @@
 .dev-space .bd-welcome h2{margin:0;font-size:21px;font-weight:600;letter-spacing:-.02em;line-height:1.4}
 .dev-space .bd-welcome p{margin:0;color:var(--ds-muted);line-height:1.65}
 .dev-space .bd-welcome div{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.dev-space .bd-preview{padding:16px 20px 20px}

@@ -147,7 +147,8 @@ export function permissions(manifest) {
   const kinds = new Set(), changes = new Set(), network = new Set();
   for (const item of manifest.views) { for (const kind of item.accepts) kinds.add(kind); for (const action of item.actions) if (action !== 'thing.open') changes.add(viewActions[action]); for (const host of item.render.hosts || []) network.add(host); }
   const reads = [];
-  if (manifest.views.length) reads.push(kinds.has('*') ? 'вещи зоны, в которой включён вид' : 'вещи зоны: ' + [...kinds].join(', '));
+  const names = { note: 'заметки', image: 'изображения', file: 'файлы', link: 'ссылки', model: '3D-модели', page: 'документы', task: 'задачи', external: 'записи подключений' };
+  if (manifest.views.length) reads.push(kinds.has('*') ? 'вещи зоны, в которой включён вид' : 'вещи зоны, в которой включён вид: ' + [...kinds].map(kind => names[kind]).join(', '));
   for (const item of manifest.connections) {
     for (const host of item.hosts) network.add(host);
     for (const definition of Object.values(item.operations)) {

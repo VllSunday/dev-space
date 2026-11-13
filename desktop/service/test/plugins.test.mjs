@@ -31,7 +31,7 @@ test('what a plugin reads, changes and reaches is computed from the manifest', (
   const manifest = validateManifest({ ...base, views: [view, { ...view, id: 'c', actions: ['thing.open'], render: { type: 'code', entry: 'view.html', hosts: ['cdn.example.com'] } }],
     connections: [{ id: 'api', title: 'Сервис', hosts: ['api.example.com'], auth: { type: 'bearer', label: 'Ключ' }, operations: { list: { kind: 'read', title: 'список', request: { method: 'GET', url: 'https://api.example.com/items' } }, close: { kind: 'action', title: 'закрыть', request: { method: 'POST', url: 'https://api.example.com/close' } } } }] });
   const rights = permissions(manifest);
-  assert.deepEqual(rights.reads, ['вещи зоны: task', 'Сервис: список']);
+  assert.deepEqual(rights.reads, ['вещи зоны, в которой включён вид: задачи', 'Сервис: список']);
   assert.deepEqual(rights.changes, ['менять статус задачи', 'Сервис: закрыть']);
   assert.deepEqual(rights.network, ['cdn.example.com', 'api.example.com']);
   assert.equal(rights.code, true);

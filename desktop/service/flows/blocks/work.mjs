@@ -13,7 +13,8 @@ export default {
   async enter(ctx) {
     const { role, task, expects } = ctx.params, came = ctx.came;
     const lines = [];
-    if (came?.summary && came.from !== ctx.stepId) lines.push(`${came.kind === 'person' ? 'Человек вернул работу' : `Шаг «${ctx.title(came.from)}» вернул работу`} с замечаниями:`, came.summary, '', 'Исправь это и сдай шаг заново.', '');
+    // Coming back to this step means someone returned the work: say why first.
+    if (ctx.again && came?.summary && came.from !== ctx.stepId) lines.push(`${came.kind === 'person' ? 'Человек вернул работу' : `Шаг «${ctx.title(came.from)}» вернул работу`} с замечаниями:`, came.summary, '', 'Исправь это и сдай шаг заново.', '');
     lines.push(task || 'Выполни задачу, описанную в данных ниже.');
     if (expects && expects !== 'nothing') lines.push('', await ctx.checkHint(expects));
     await ctx.tell(role, { task: lines.join('\n'), outputs: ['done', 'blocked'] });
