@@ -5,7 +5,7 @@ export interface Thing {
   ref: string; id: string; kind: ThingKind; title: string; text: string
   image?: string; model?: string; icon?: string; files?: number; topicId?: string
   status?: string; statusGroup?: StatusGroup; key?: string; url?: string; assignee?: string
-  updated?: string; created?: string; archived?: boolean; sourceId?: string
+  updated?: string; created?: string; archived?: boolean; sourceId?: string; external?: string; paths?: string[]
 }
 export const statusGroups: StatusGroup[]
 export const statusGroupNames: Record<StatusGroup, string>

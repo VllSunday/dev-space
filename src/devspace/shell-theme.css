@@ -30,3 +30,15 @@ html body.devspace-shell .desktop-root .conversation-composer:focus-within{borde
 .skill-folder-empty strong{color:var(--ds-text)}
 .skill-folder-empty code{font:10px/1.7 var(--font-mono);overflow-wrap:anywhere;max-width:100%}
 .skill-folder-empty button{border:1px solid var(--ds-input);font-size:11px}
+
+/* Places: the right side is one of three. */
+.ds-agents-toggle{display:inline-flex;align-items:center;gap:6px;margin-left:16px}
+.ds-agents-toggle.active{color:var(--ds-text)}
+.ds-places{display:flex;align-items:center;gap:2px;margin-left:8px;padding:2px;border:1px solid var(--ds-border);border-radius:7px}
+.ds-places button{display:inline-flex;align-items:center;gap:6px;background:none;border:0;border-radius:5px;padding:3px 11px;font:500 12px/1.5 var(--font-body);color:var(--ds-muted);cursor:pointer;position:relative}
+.ds-places button:hover{color:var(--ds-text)}
+.ds-places button.active{background:var(--ds-selection,#ffffff17);color:var(--ds-text)}
+.ds-places i{font-style:normal;font-size:10px;line-height:15px;min-width:15px;height:15px;border-radius:8px;background:var(--ds-accent);color:#111215;text-align:center;font-weight:600}
+.ds-agent-pane{display:flex;flex-direction:column}.ds-agent-pane>.ds-agent-workbench,.ds-agent-pane>:last-child{flex:1;min-height:0}
+.ds-presets{border:0;padding:0;margin:0}.ds-presets legend{padding:0 0 8px;color:var(--ds-muted)}
+@media(max-width:900px){.ds-places button span,.ds-agents-toggle span,.ds-agents-toggle kbd{display:none}}

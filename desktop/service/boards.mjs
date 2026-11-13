@@ -8,7 +8,7 @@ export const zoneColors = ['#7fb0a8', '#96b2d7', '#d9a37f', '#b7a3d9', '#9cc5a3'
 export const defaultBoardKind = 'core/free';
 const pluginRef = /^[a-z0-9][a-z0-9-]{0,39}\/[a-z0-9][a-z0-9-]{0,39}$/;
 const refPattern = /^(material|page|task):[a-zA-Z0-9-]{1,100}$/;
-const COLUMN = 19, GAP = 1;
+const COLUMN = 16, GAP = 1;
 
 const title = (value, max = 120) => {
   if (typeof value !== 'string' || !value.trim() || value.length > max || /[\x00-\x1f\x7f]/.test(value)) throw fail('Введите название.');
@@ -63,9 +63,10 @@ export const boardName = title;
 // How tall a zone needs to be to show a short preview of its things.
 function estimateHeight(view, count) {
   const shown = Math.min(count, 8);
-  if (view === 'core/gallery' || view === 'core/tiles') return 3 + Math.max(1, Math.ceil(shown / 2)) * 7;
-  if (view === 'tasks/columns') return 4 + Math.min(6, Math.max(2, count)) * 2;
-  return 3 + Math.max(2, shown) * 2;
+  if (view === 'core/tiles') return 3 + Math.max(1, Math.ceil(shown / 2)) * 7;
+  if (view === 'core/gallery') return 3 + Math.max(1, Math.ceil(shown / 2)) * 6;
+  if (view === 'tasks/columns') return 6 + Math.min(5, Math.max(2, count)) * 3;
+  return Math.max(5, 3 + Math.ceil(Math.max(1, shown) * 1.5));
 }
 // Places zones without positions into columns, shortest column first.
 export function arrange(zones, columns = 3) {
