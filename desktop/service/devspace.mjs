@@ -44,7 +44,9 @@ export class DevSpace {
       let legacy; try { legacy = JSON.parse(await readFile(path.join(this.repo, 'workspace', 'workspace.json'), 'utf8')); } catch { legacy = { entities: [] }; }
       const projects = (legacy.spaces?.length ? legacy.spaces : [{ id: 'default', name: 'Мой проект', sections: [] }]).map(p => ({ id: p.id, name: p.name, path: this.repo, topics: (p.sections || []).filter(t => !['inbox', 'context'].includes(t.id)).map(t => ({ id: t.id, name: t.name })) }));
       const materials = (legacy.entities || []).map(m => ({ id: m.id, projectId: projects.some(p => p.id === m.spaceId) ? m.spaceId : projects[0].id, topicId: projects.find(p=>p.id===(m.spaceId||projects[0].id))?.topics.some(t=>t.id===m.category) ? m.category : 'unfiled', title: m.title, text: m.description || '', kind: 'legacy', legacyId: m.id, files: [], archived: m.status === 'archived', created: m.created || now(), updated: now() }));
-      await saveJson(this.file, { schemaVersion: 1, revision: 0, projects, materials, pages: [], tasks: [] });
+      const fresh = { schemaVersion: 1, revision: 0, projects, materials, pages: [], tasks: [] };
+      ensureBoards(fresh);
+      await saveJson(this.file, fresh);
     }
     await this.addBoards();
     return this;
@@ -107,10 +109,12 @@ export class DevSpace {
       drafts[data.key]={text:content,files,version:data.version,baseline:typeof data.baseline==='string'?text(data.baseline):null,cleared:!!data.cleared};await saveJson(path.join(this.folder,'drafts.json'),drafts);return drafts[data.key];
     });this.queue=operation;return operation;
   }
-  mutate(data) {
+  // `latest` is for changes the service makes itself (a flow step, a plugin
+  // operation): they apply to whatever the current version is.
+  mutate(data, { latest = false } = {}) {
     const next = this.queue.catch(() => {}).then(async () => {
       const state = await this.read();
-      if (data.baseRevision !== state.revision) throw fail('Содержимое изменилось. Обновите данные и повторите действие; ваш черновик сохранён.', 409);
+      if (!latest && data.baseRevision !== state.revision) throw fail('Содержимое изменилось. Обновите данные и повторите действие; ваш черновик сохранён.', 409);
       const before = structuredClone(state), project = state.projects.find(p => p.id === data.projectId);
       const topicExists = (p, t) => t === 'unfiled' || p?.topics.some(x => x.id === t);
       const material = state.materials.find(m => m.id === data.id), page = state.pages.find(p => p.id === data.id);
@@ -254,7 +258,7 @@ export class DevSpace {
           zone.source.refs = [...new Set([...add, ...zone.source.refs])].filter(ref => !remove.includes(ref));
           if (zone.source.refs.length > 500) throw fail('В зоне может быть до 500 вещей.'); break;
         }
-        case 'apply-proposal': { if(!ref(data.id))throw fail('Неверный ID.');const proposal = validateProposal(JSON.parse(await readFile(path.join(this.folder,'proposals',data.id+'.json'),'utf8')),state);if(proposal.baseRevision!==state.revision)throw fail('Предложение создано для прошлой версии. Попросите агента обновить его.',409);state.pages.push({...proposal,id:id('page'),revision:0,updated:now()});state.appliedProposals=[...(state.appliedProposals||[]),data.id];break; }
+        case 'apply-proposal': { if(!ref(data.id))throw fail('Неверный ID.');const proposal = validateProposal(JSON.parse(await readFile(path.join(this.folder,'proposals',data.id+'.json'),'utf8')),state);/* A proposal adds a page and changes nothing else, so a newer store is not a conflict; its sources were re-checked above. */if(proposal.baseRevision>state.revision)throw fail('Предложение создано для версии, которой ещё нет.',409);state.pages.push({...proposal,id:id('page'),revision:0,updated:now()});state.appliedProposals=[...(state.appliedProposals||[]),data.id];break; }
         case 'undo': { const histories=(await readdir(path.join(this.folder,'history'))).filter(f=>/^\d+\.json$/.test(f)).sort((a,b)=>Number(b.slice(0,-5))-Number(a.slice(0,-5))); if(!histories.length)throw fail('Нет действия для отмены.');const old=JSON.parse(await readFile(path.join(this.folder,'history',histories[0]),'utf8'));old.revision=state.revision+1;await saveJson(this.file,old);await unlink(path.join(this.folder,'history',histories[0]));this.changed();return old; }
         default: throw fail('Неизвестное действие.');
       }

@@ -54,5 +54,5 @@ export function zoneThings(state, projectId, zone, external = []) {
 // Text from a file, a material or an outside service is reference data. This
 // trims it and removes control characters before it is shown or quoted.
 export function plainText(value, max = 2000) {
-  return String(value ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f  ]/g, ' ').slice(0, max);
+  return String(value ?? '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u2028\u2029]/g, ' ').slice(0, max);
 }
