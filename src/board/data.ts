@@ -13,7 +13,7 @@ const emptyFlows: FlowsState = { flows: [], drafts: [], blocks: [], runs: [], re
 export function usePlugins() {
   const [state, setState] = useState(emptyPlugins)
   const reload = useCallback(() => api<PluginsState>('/plugins').then(setState).catch(() => {}), [])
-  useEffect(() => { void reload(); return onServiceEvent(event => { if (['plugins-changed', 'devspace-changed', 'flow-run'].includes(event.type)) void reload() }) }, [reload])
+  useEffect(() => { void reload(); let timer = 0; const off = onServiceEvent(event => { if (['plugins-changed', 'devspace-changed', 'flow-run'].includes(event.type)) { clearTimeout(timer); timer = window.setTimeout(() => void reload(), event.type === 'plugins-changed' ? 0 : 400) } }); return () => { clearTimeout(timer); off() } }, [reload])
   return { ...state, reload }
 }
 // The flow library and the runs. Runs arrive as events while a flow moves.

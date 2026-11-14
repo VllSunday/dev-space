@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import React, { useEffect, useRef, useState, type ReactNode } from 'react'
 import { contentUrl } from '../desktop/client'
 import { Icon, TopicIcon } from '../desktop/Icons'
 import type { Part, PluginView, Thing } from './types'
@@ -31,9 +31,11 @@ function Preview({ thing }: { thing: Thing }) {
   if (thing.kind === 'page') return <span className="pv-page">{thing.icon ? <TopicIcon value={thing.icon} size={22} /> : <Icon name="book" size={22} />}<small>{thing.text.slice(0, 90)}</small></span>
   return <span className="pv-note"><small>{thing.text.slice(0, 160) || kindNames[thing.kind]}</small></span>
 }
+// A card can be carried to another zone; the zone decides what that means.
+const carry = (event: React.DragEvent, thing: Thing) => { event.dataTransfer.setData('text/devspace-thing', thing.ref); event.dataTransfer.effectAllowed = 'move' }
 function Card({ thing, handlers, children, className = '' }: { thing: Thing; handlers: ViewHandlers; children: ReactNode; className?: string }) {
   const picked = handlers.selected?.has(thing.ref)
-  return <div className={`pv-item ${className}${picked ? ' picked' : ''}`} data-ref={thing.ref}>
+  return <div className={`pv-item ${className}${picked ? ' picked' : ''}`} data-ref={thing.ref} draggable={!thing.external} onDragStart={event => carry(event, thing)}>
     <button type="button" className="pv-open" onClick={event => { if ((event.ctrlKey || event.metaKey) && handlers.toggle) handlers.toggle(thing); else handlers.open(thing) }} title={thing.title}>{children}</button>
     {handlers.toggle && <label className="pv-pick" title="Выбрать"><input type="checkbox" checked={!!picked} onChange={() => handlers.toggle!(thing)} aria-label={'Выбрать: ' + thing.title} /></label>}
   </div>
@@ -41,7 +43,7 @@ function Card({ thing, handlers, children, className = '' }: { thing: Thing; han
 const canStatus = (view: PluginView, thing: Thing, handlers: ViewHandlers) => !!handlers.setStatus && view.actions.includes('thing.status') && thing.statusGroup !== undefined
 
 function List({ part, view, things, handlers }: { part: Extract<Part, { part: 'list' }>; view: PluginView; things: Thing[]; handlers: ViewHandlers }) {
-  return <div className="pv-list">{things.map(thing => <div className={'pv-row' + (thing.statusGroup === 'done' ? ' done' : '') + (handlers.selected?.has(thing.ref) ? ' picked' : '')} key={thing.ref} data-ref={thing.ref}>
+  return <div className="pv-list">{things.map(thing => <div className={'pv-row' + (thing.statusGroup === 'done' ? ' done' : '') + (handlers.selected?.has(thing.ref) ? ' picked' : '')} key={thing.ref} data-ref={thing.ref} draggable={!thing.external} onDragStart={event => carry(event, thing)}>
     {canStatus(view, thing, handlers)
       ? <input type="checkbox" checked={thing.statusGroup === 'done'} onChange={event => handlers.setStatus!(thing, event.target.checked ? 'done' : 'todo')} aria-label={'Готово: ' + thing.title} />
       : handlers.toggle ? <label className="pv-pick inline"><input type="checkbox" checked={!!handlers.selected?.has(thing.ref)} onChange={() => handlers.toggle!(thing)} aria-label={'Выбрать: ' + thing.title} /><Icon name={kindIcon[thing.kind]} size={14} /></label> : <Icon name={kindIcon[thing.kind]} size={14} />}
@@ -62,7 +64,7 @@ function Columns({ part, view, things, handlers }: { part: Extract<Part, { part:
     const items = things.filter(thing => fieldValue(thing, part.by) === column.value)
     return <section key={column.value} className={over === column.value ? 'over' : ''}
       onDragOver={event => { if (movable && event.dataTransfer.types.includes('text/devspace-thing')) { event.preventDefault(); setOver(column.value) } }} onDragLeave={() => setOver('')}
-      onDrop={event => { setOver(''); const thing = things.find(item => item.ref === event.dataTransfer.getData('text/devspace-thing')); if (thing && movable && thing.statusGroup !== column.value) { event.preventDefault(); handlers.setStatus!(thing, column.value as StatusGroup) } }}>
+      onDrop={event => { setOver(''); const thing = things.find(item => item.ref === event.dataTransfer.getData('text/devspace-thing')); if (thing) event.stopPropagation(); if (thing && movable && thing.statusGroup !== column.value) { event.preventDefault(); handlers.setStatus!(thing, column.value as StatusGroup) } }}>
       <header><span>{column.title}</span><small>{items.length}</small></header>
       {items.map(thing => <div className={'pv-kcard' + (column.value === 'done' ? ' done' : '')} key={thing.ref} data-ref={thing.ref} draggable={movable && thing.statusGroup !== undefined} onDragStart={event => { event.dataTransfer.setData('text/devspace-thing', thing.ref); event.dataTransfer.effectAllowed = 'move' }}>
         <button type="button" className="pv-open" onClick={() => handlers.open(thing)} title={thing.title}>{thing.key && <code>{thing.key}</code>}<b>{thing.title}</b>{thing.assignee && <small>{thing.assignee}</small>}</button>

@@ -93,6 +93,12 @@ try {
   const runs = () => service.flows.list();
   expect(runs()[0].path.map(entry => entry.output)).toEqual(['taken', 'ok', 'done', 'remarks', 'done', 'clean']);
   expect((await (await fetch(service.origin + '/api/bootstrap', { headers: { Authorization: 'Bearer ' + service.token } })).json()).settings.agentSpaces.map(space => space.name)).toContain('Разбор задач');
+  // The run can be read step by step.
+  await place('Флоу').click();
+  await page.locator('.fl-run').first().click();
+  await expect(page.locator('.fl-path li b')).toHaveText(['Вход', 'В работу', 'Работа', 'Проверка', 'Работа', 'Проверка', 'Мне']);
+  await expect(page.locator('.fl-path')).toContainText('Замечание 1: нет проверки пустого ввода.');
+  await shot('flows-run-detail');
   await place('Проект').click();
   const taken = runs()[0].item.ref.slice(5);
   expect((await store()).tasks.find(task => task.id === taken).status).toBe('working');
@@ -114,10 +120,12 @@ try {
   await place('Проект').click();
   await expect(page.locator('.bd-proposal.needs-person')).toContainText('Сработал предел возвратов: «Проверка → Работа» не больше 1 раз');
   await shot('flows-limit');
-  await page.locator('.bd-proposal').getByRole('button', { name: 'Остановить флоу' }).click();
-  await expect(page.locator('.bd-proposal')).toHaveCount(0);
   process.env.DEVSPACE_STUB_MODE = '';
   await place('Флоу').click();
+  await page.locator('.fl-run').first().click();
+  await page.getByRole('button', { name: 'Остановить флоу' }).click();
+  await expect(page.locator('.fl-detail .fl-status')).toHaveText('остановлен');
+  await page.locator('.fl-library nav button', { hasText: 'Задача → работа' }).click();
   await page.getByRole('button', { name: 'Вернуть исходный' }).click();
   await expect(limit).toHaveValue('2');
 

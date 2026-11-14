@@ -61,8 +61,20 @@ function ZoneCard({ zone, board, api, things, error, loading, box, style, draggi
     if (zone.source.kind !== 'topic' && zone.source.kind !== 'refs' || !files.length) return
     try { const added = await Promise.all(files.map(uploadSpaceFile)); await api.mutate({ action: 'create-material', projectId: api.project.id, topicId: zone.source.kind === 'topic' && zone.source.topicId !== 'all' ? zone.source.topicId : 'unfiled', text: '', files: added, boardId: board.id, zoneId: zone.id }); api.notify(added.length === 1 ? 'Файл добавлен в зону «' + zone.name + '»' : 'Файлы добавлены в зону «' + zone.name + '»') } catch (error) { api.notify((error as Error).message) }
   }
+  // A card dropped on a zone moves there: a material changes its topic, and a
+  // hand-picked zone gets one more reference. Nothing is copied.
+  const takes = zone.source.kind === 'refs' || zone.source.kind === 'topic' && zone.source.topicId !== 'all'
+  const land = async (ref: string) => {
+    if (things.some(thing => thing.ref === ref)) return
+    try {
+      if (zone.source.kind === 'refs') await api.mutate({ action: 'zone-refs', boardId: board.id, zoneId: zone.id, add: [ref] })
+      else if (zone.source.kind === 'topic' && ref.startsWith('material:')) await api.mutate({ action: 'update-material', id: ref.slice(9), topicId: zone.source.topicId })
+      else { api.notify('В эту зону можно положить заметки и файлы. Для остального сделайте подборку: «Добавить → Зона → Подборка».'); return }
+      api.notify('Перенесено в зону «' + zone.name + '»')
+    } catch (error) { api.notify((error as Error).message) }
+  }
   return <section className={'bd-zone' + (zone.collapsed ? ' collapsed' : '') + (dragging ? ' dragging' : '') + (dim ? ' dim' : '') + (dropping ? ' dropping' : '')} style={{ ...style, '--zone': zone.color || 'var(--ds-faint)' } as CSSProperties} data-zone={zone.id} aria-label={'Зона ' + zone.name}
-    onDragOver={event => { if (event.dataTransfer.types.includes('Files') && (zone.source.kind === 'topic' || zone.source.kind === 'refs')) { event.preventDefault(); event.stopPropagation(); setDropping(true) } }} onDragLeave={() => setDropping(false)} onDrop={event => { if (!event.dataTransfer.files.length) return; event.preventDefault(); event.stopPropagation(); setDropping(false); void drop([...event.dataTransfer.files]) }}>
+    onDragOver={event => { if (event.dataTransfer.types.includes('Files') && (zone.source.kind === 'topic' || zone.source.kind === 'refs') || takes && event.dataTransfer.types.includes('text/devspace-thing')) { event.preventDefault(); event.stopPropagation(); setDropping(true) } }} onDragLeave={() => setDropping(false)} onDrop={event => { setDropping(false); const ref = event.dataTransfer.getData('text/devspace-thing'); if (ref && takes) { event.preventDefault(); event.stopPropagation(); void land(ref); return } if (!event.dataTransfer.files.length) return; event.preventDefault(); event.stopPropagation(); void drop([...event.dataTransfer.files]) }}>
     <header onPointerDown={onGrab}>
       <i className="bd-dot" />
       {zone.icon && <TopicIcon value={zone.icon} size={14} />}
@@ -157,7 +169,7 @@ export function BoardSurface({ api, welcome }: { api: BoardApi; welcome?: ReactN
     const dim = !!api.query && zone.source.kind !== 'outline' && !things[zone.id].some(thing => matches(thing, api.query))
     const common = { zone, board, api, things: things[zone.id], error: source?.error, loading: source?.loading && !source.things.length, outline, dim }
     if (free) return <ZoneCard key={zone.id} {...common} box={box} dragging={drag?.id === zone.id} style={{ left: box.x * CELL, top: box.y * CELL, width: box.w * CELL, height: box.h * CELL }} onGrab={event => track(event, zone, 'move')} onResize={event => { event.stopPropagation(); track(event, zone, 'size') }} />
-    return <div key={zone.id} className={'bd-slot' + (reorder === zone.id ? ' moving' : '')} draggable onDragStart={event => { if ((event.target as HTMLElement).closest('.bd-zone-body')) { event.preventDefault(); return } event.dataTransfer.setData('text/devspace-zone', zone.id); event.dataTransfer.effectAllowed = 'move'; setReorder(zone.id) }} onDragEnd={() => setReorder(null)} onDragOver={event => { if (event.dataTransfer.types.includes('text/devspace-zone')) event.preventDefault() }} onDrop={event => { if (event.dataTransfer.types.includes('text/devspace-zone')) { event.preventDefault(); dropBefore(zone.id) } }}><ZoneCard {...common} box={{ ...box, w: 16, h: Math.min(box.h, 22) }} /></div>
+    return <div key={zone.id} className={'bd-slot' + (reorder === zone.id ? ' moving' : '')} draggable onDragStart={event => { if ((event.target as HTMLElement).closest('.bd-zone-body')) return; event.dataTransfer.setData('text/devspace-zone', zone.id); event.dataTransfer.effectAllowed = 'move'; setReorder(zone.id) }} onDragEnd={() => setReorder(null)} onDragOver={event => { if (event.dataTransfer.types.includes('text/devspace-zone')) event.preventDefault() }} onDrop={event => { if (event.dataTransfer.types.includes('text/devspace-zone')) { event.preventDefault(); dropBefore(zone.id) } }}><ZoneCard {...common} box={{ ...box, w: 16, h: Math.min(box.h, 22) }} /></div>
   })
   return <div className={`bd-surface bg-${kind.look.background || 'dots'} zone-${kind.look.zone || 'card'} density-${kind.look.density || 'cozy'} layout-${kind.layout}`} ref={surface} onPointerDown={pan} style={kind.look.accent ? { '--bd-accent': kind.look.accent } as CSSProperties : undefined}>
     {!board.zones.length ? <div className="bd-blank"><h2>На этой доске пока пусто</h2><p>Доска состоит из зон. Зона — это группа вещей с вашим названием: заметки, картинки, модели, документы или задачи.</p><p className="ds-muted">Нажмите «Добавить» вверху: создайте зону или опишите словами, что хотите здесь видеть.</p></div>

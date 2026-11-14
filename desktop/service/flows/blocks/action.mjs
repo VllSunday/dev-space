@@ -23,7 +23,8 @@ export default {
       if (command) { const result = await ctx.call(command, { run: ctx.run.id, file: ctx.lastResult()?.data?.file, sessionId: ctx.run.item?.sessionId }); return { output: 'ok', summary: result?.summary || 'Сделано.', data: result }; }
       if (!ctx.run.item?.id) return { output: 'failed', summary: 'Во флоу нет задачи, над которой выполнить действие.' };
       await ctx.call('op.role', { need, operation, params: { id: ctx.run.item.id, ...(status ? { status } : {}), ...(text ? { text } : {}) } });
-      return { output: 'ok', summary: `${ctx.connectionTitle(need)}: ${operation}${status ? ' → ' + status : ''}` };
+      const names = { todo: 'не начато', doing: 'в работе', done: 'завершено' };
+      return { output: 'ok', summary: `${ctx.connectionTitle(need)}: ${operation === 'setStatus' ? 'статус «' + names[status] + '»' : operation === 'comment' ? 'комментарий оставлен' : operation}` };
     } catch (error) { return { output: 'failed', summary: error.message }; }
   },
 };

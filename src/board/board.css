@@ -181,3 +181,8 @@
 .dev-space .bd-welcome p{margin:0;color:var(--ds-muted);line-height:1.65}
 .dev-space .bd-welcome div{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .dev-space .bd-preview{padding:16px 20px 20px}
+.dev-space .bd-elsewhere{display:flex;align-items:center;gap:6px;padding:8px 16px 0;flex:none;color:var(--ds-faint);font-size:12px;flex-wrap:wrap}
+.dev-space .bd-elsewhere button{min-height:0;padding:2px 9px;border:1px solid var(--ds-border);border-radius:5px;color:var(--ds-muted);gap:6px}
+.dev-space .bd-elsewhere button:hover{color:var(--ds-text)}.dev-space .bd-elsewhere small{color:var(--ds-faint)}
+.dev-space .bd-selection select{padding:5px 8px;max-width:170px}
+.dev-space .pv-row[draggable=true],.dev-space .pv-item[draggable=true]{cursor:grab}

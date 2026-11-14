@@ -116,6 +116,29 @@ try {
   expect(withNote.materials[0]).toMatchObject({ topicId: topic.id, text: 'Ветер меняет направление каждые 40 секунд' });
   await page.locator('.bd-crumbs button').first().click();
 
+  // A card carried to another zone moves there; nothing is copied.
+  await zone('Локации').locator('.pv-row', { hasText: 'Облачный сад' }).dragTo(zone('Идеи'));
+  await expect(zone('Идеи').locator('.pv-row')).toHaveCount(2);
+  await expect(zone('Локации').locator('.pv-row')).toHaveCount(3);
+  const moved = (await store()).materials.find(item => item.title === 'Облачный сад');
+  expect(moved.topicId).toBe(topic.id); expect((await store()).materials.length).toBe(withNote.materials.length);
+  // Selected cards go into a hand-picked zone as references.
+  for (const index of [0, 1]) { const row = zone('Геймплей').locator('.pv-row').nth(index); await row.hover(); await row.locator('input[type=checkbox]').check({ force: true }); }
+  await page.getByLabel('Положить в подборку').selectOption('new');
+  await expect(zone('Подборка').locator('.pv-tile')).toHaveCount(2);
+  await expect(zone('Геймплей').locator('.pv-row')).toHaveCount(2);
+  expect((await saved('Подборка')).source.refs).toHaveLength(2);
+  // A second board; search points to matches on the other one.
+  await page.getByRole('button', { name: 'Новая доска' }).click();
+  await page.getByRole('dialog', { name: 'Новая доска' }).getByLabel('Название').fill('Уровень 1');
+  await page.getByRole('dialog', { name: 'Новая доска' }).getByRole('button', { name: 'Добавить' }).click();
+  await expect(page.locator('.bd-blank h2')).toHaveText('На этой доске пока пусто');
+  await page.getByLabel('Найти на доске').fill('обсерватор');
+  await expect(page.locator('.bd-elsewhere button')).toHaveText('Главная1');
+  await page.locator('.bd-elsewhere button').click();
+  await expect(zone('Локации').locator('.pv-row')).toHaveCount(1);
+  await page.getByLabel('Найти на доске').fill('');
+
   // A plugin that changes the board itself. The built-in one arranges zones in
   // columns; a third-party one is installed after its rights are shown.
   await page.getByRole('button', { name: 'Вид доски' }).click();
@@ -181,14 +204,14 @@ try {
   await expect(page.getByRole('toolbar', { name: 'Выбранные вещи' })).toContainText('Выбрано 2');
   await shot('board-selection');
   await page.getByRole('toolbar', { name: 'Выбранные вещи' }).getByRole('button', { name: 'Отдать агенту' }).click();
-  await expect.poll(async () => (await service.sessions.read(agent.id)).screen.replace(/\n/g, '')).toMatch(/С доски Dev Space: «Маячная пристань» \[material:[\w-]+\], «Облачный сад»/);
+  await expect.poll(async () => (await service.sessions.read(agent.id)).screen.replace(/\n/g, '')).toMatch(/С доски Dev Space: «[^»]+» \[material:[\w-]+\], «[^»]+» \[material:[\w-]+\]\./);
   expect((await service.sessions.read(agent.id)).screen).not.toContain('stub: step');
   await expect(page.getByRole('toolbar', { name: 'Выбранные вещи' })).toHaveCount(0);
 
   // Nothing that existed before was changed by any of this.
-  const last = await store(), kept = list => list.filter(item => first[list === last.materials ? 'materials' : 'pages'].some(old => old.id === item.id));
-  expect(kept(last.materials)).toEqual(first.materials); expect(kept(last.pages)).toEqual(first.pages);
-  console.log('PASS: first run, example board, three levels, move, resize, collapse, hide, search, add zone and note, board plugins, sandboxed view, hand-off to an agent, data intact');
+  const last = await store(), kept = (list, old) => list.filter(item => item.id !== moved.id && old.some(entry => entry.id === item.id));
+  expect(kept(last.materials, first.materials)).toEqual(first.materials.filter(item => item.id !== moved.id)); expect(kept(last.pages, first.pages)).toEqual(first.pages);
+  console.log('PASS: first run, example board, three levels, move, resize, collapse, hide, search across boards, add zone and note, carry a card, hand-picked zone, board plugins, sandboxed view, hand-off to an agent, data intact');
 } catch (error) {
   // What was on screen when a step failed.
   for (const context of browser?.contexts() || []) for (const page of context.pages()) await page.screenshot({ path: path.join(shots, 'failure.png') }).catch(() => {});

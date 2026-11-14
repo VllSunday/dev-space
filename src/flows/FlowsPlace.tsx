@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../desktop/client'
 import { Icon } from '../desktop/Icons'
 import type { PluginsState } from '../plugins/types'
-import type { BlockInfo, BlockParam, Flow, FlowEntry, FlowProblem, FlowsState, FlowStep } from './types'
+import type { BlockInfo, BlockParam, Flow, FlowEntry, FlowProblem, FlowRun, FlowsState, FlowStep } from './types'
 import { runStatus, terminalNames } from './types'
 import type { LaunchRequest } from './LaunchDialog'
 import './flows.css'
@@ -44,8 +44,28 @@ function StepCard({ id, step, flow, blocks, problems, change, remove, roleTitles
   </article>
 }
 
-export default function FlowsPlace({ flows, plugins, focus, launch, notify }: { flows: FlowsState & { reload: () => Promise<unknown> }; plugins: PluginsState; focus: string; launch: (flowId: string, input?: LaunchRequest['input']) => void; notify: (text: string) => void }) {
-  const [selectedId, setSelectedId] = useState(focus || lastFlow), [mode, setMode] = useState<'blocks' | 'text'>('blocks'), [pane, setPane] = useState<'flow' | 'reference'>('flow')
+// One run: what has happened step by step, and the ways a person can step in.
+function RunDetail({ run, flows, focusAgent, notify }: { run: FlowRun; flows: FlowsState; focusAgent: (sessionId: string) => void; notify: (text: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  const act = (path: string, body: Record<string, unknown>) => { setBusy(true); void api(path, { runId: run.id, ...body }).catch(error => notify((error as Error).message)).finally(() => setBusy(false)) }
+  const outputTitle = (stepId: string, output: string) => flows.blocks.find(block => block.id === run.steps.find(step => step.id === stepId)?.block)?.outputs.find(item => item.id === output)?.title || output
+  const live = !['done', 'stopped'].includes(run.status)
+  return <section className="fl-detail">
+    <header className="fl-head"><div><h1>{run.name}</h1><p className="fl-file">запуск {new Date(run.createdAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}{run.item && ' · ' + (run.item.key ? run.item.key + ' ' : '') + run.item.title}</p></div>
+      {run.status === 'needs-person' && run.canContinue && <button type="button" className="ds-primary" disabled={busy} onClick={() => act('/flows/resolve', { action: 'continue' })}>Продолжить</button>}
+      {live && <button type="button" className="ds-secondary" disabled={busy} onClick={() => act('/flows/resolve', { action: 'stop' })}>Остановить флоу</button>}
+    </header>
+    <div className="fl-meta"><span className={'fl-status ' + run.status}>{runStatus[run.status]}</span>{Object.entries(run.roles).map(([id, role]) => role.sessionId ? <button type="button" key={id} className={'fl-role' + (role.active ? ' active' : '')} onClick={() => focusAgent(role.sessionId!)} title="Перейти к терминалу">{role.title}</button> : <span className="fl-chip" key={id}>{role.title} — ещё не открыт</span>)}{Object.values(run.needs).map(need => <span className="fl-chip plug" key={need.connectionId}><Icon name="mcp" size={11} />{need.title}</span>)}<span className="fl-chip">передач {run.counters.handoffs} из {run.limits.handoffs ?? '—'}</span></div>
+    {run.reason && <p className="fl-problem" role="status">{run.reason}</p>}
+    {run.status === 'waiting-person' && <p className="fl-lead">Флоу ждёт вашего решения: предложение лежит на доске проекта.</p>}
+    <div className="fl-body"><ol className="fl-path">{run.path.map((entry, index) => <li key={index}><i><Icon name="check" size={10} /></i><div><b>{entry.title}</b><em>{outputTitle(entry.step, entry.output)}</em><time>{new Date(entry.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</time>{entry.summary && <p>{entry.summary}</p>}</div></li>)}
+      {live && run.current && <li className="now"><i /><div><b>{run.steps.find(step => step.id === run.current)?.title}</b><em>{run.status === 'running' ? 'идёт сейчас' : runStatus[run.status]}</em></div></li>}
+    </ol></div>
+  </section>
+}
+
+export default function FlowsPlace({ flows, plugins, focus, launch, notify, focusAgent }: { flows: FlowsState & { reload: () => Promise<unknown> }; plugins: PluginsState; focus: string; launch: (flowId: string, input?: LaunchRequest['input']) => void; notify: (text: string) => void; focusAgent: (sessionId: string) => void }) {
+  const [selectedId, setSelectedId] = useState(focus || lastFlow), [mode, setMode] = useState<'blocks' | 'text'>('blocks'), [pane, setPane] = useState<'flow' | 'reference' | 'run'>('flow'), [runId, setRunId] = useState('')
   const entry: FlowEntry | undefined = flows.flows.find(item => item.id === selectedId) || flows.flows[0]
   const [text, setText] = useState(''), [checked, setChecked] = useState<{ ok: boolean; problems: FlowProblem[]; flow: Flow | null; order: string[] } | null>(null)
   const [words, setWords] = useState(''), [adding, setAdding] = useState(''), [busy, setBusy] = useState(false), [naming, setNaming] = useState<string | null>(null)
@@ -76,12 +96,13 @@ export default function FlowsPlace({ flows, plugins, focus, launch, notify }: { 
         <b>{item.name}</b><small>{item.flow ? plural(Object.keys(item.flow.roles).length, 'агент', 'агента', 'агентов') + ' · ' + plural(Object.keys(item.flow.steps).length, 'шаг', 'шага', 'шагов') : 'не читается'}{item.origin === 'plugin' ? ' · из плагина ' + item.plugin : item.origin === 'user' ? item.changed ? ' · изменён' : ' · свой' : ''}{!item.ok && ' · есть проблемы'}</small>
       </button>)}</nav>
       {flows.drafts.length > 0 && <section><h3>Черновики от агента</h3>{flows.drafts.map(item => <div className="fl-draft" key={item.id}><b>{item.name}</b><small>{item.ok ? 'проверен' : item.problems[0]?.text || 'есть проблемы'}</small><span><button type="button" className="ds-primary" disabled={!item.ok} onClick={() => void api('/flows/drafts', { id: item.id, action: 'accept' }).then(() => { notify('Флоу сохранён в библиотеку'); setSelectedId(item.id); return flows.reload() }).catch(error => notify((error as Error).message))}>Принять</button><button type="button" className="ds-secondary" onClick={() => void api('/flows/drafts', { id: item.id, action: 'discard' }).then(() => flows.reload()).catch(() => {})}>Отклонить</button></span></div>)}</section>}
-      {runs.length > 0 && <section><h3>Запуски</h3>{runs.map(run => <button type="button" key={run.id} className="fl-run" onClick={() => { setSelectedId(run.flowId); setPane('flow') }} title={run.reason || undefined}><b>{run.name}</b><small>{run.item?.title ? run.item.title + ' · ' : ''}{run.steps.find(step => step.state === 'current')?.title || ''}</small><em className={run.status}>{runStatus[run.status]}</em></button>)}</section>}
+      {runs.length > 0 && <section><h3>Запуски</h3>{runs.map(run => <button type="button" key={run.id} className={'fl-run' + (pane === 'run' && runId === run.id ? ' active' : '')} onClick={() => { setRunId(run.id); setPane('run') }} title={run.reason || undefined}><b>{run.name}</b><small>{run.item?.title ? run.item.title + ' · ' : ''}{run.steps.find(step => step.state === 'current')?.title || ''}</small><em className={run.status}>{runStatus[run.status]}</em></button>)}</section>}
       <span className="fl-fill" />
       <footer><h3>Под капотом</h3><button type="button" className={pane === 'reference' ? 'active' : ''} onClick={() => setPane('reference')}><Icon name="book" size={14} /><span><b>Справочник для агентов</b><small>{plural(flows.blocks.length, 'блок', 'блока', 'блоков')} · {plural(flows.commands.length, 'команда', 'команды', 'команд')}</small></span></button></footer>
     </aside>
 
-    {pane === 'reference' ? <section className="fl-detail"><header className="fl-head"><div><h1>Справочник для агентов</h1><p>Его получает каждый агент, которого открывает Dev Space: команда <code>devspace help</code> в терминале. Плагины добавляют сюда свои операции, блоки и инструкции сами.</p></div></header><pre className="fl-reference">{flows.reference}</pre></section>
+    {pane === 'run' && flows.runs.some(run => run.id === runId) ? <RunDetail run={flows.runs.find(run => run.id === runId)!} flows={flows} focusAgent={focusAgent} notify={notify} />
+      : pane === 'reference' ? <section className="fl-detail"><header className="fl-head"><div><h1>Справочник для агентов</h1><p>Его получает каждый агент, которого открывает Dev Space: команда <code>devspace help</code> в терминале. Плагины добавляют сюда свои операции, блоки и инструкции сами.</p></div></header><pre className="fl-reference">{flows.reference}</pre></section>
       : !entry || !flow ? <section className="fl-detail"><div className="ds-empty"><h2>{entry ? 'Файл флоу не читается' : 'Флоу пока нет'}</h2><p>{entry ? entry.problems[0]?.text : 'Создайте первый флоу или опишите процесс словами.'}</p>{entry && <textarea className="fl-text" value={text} onChange={event => setText(event.target.value)} spellCheck={false} aria-label="Текст флоу" />}{entry && dirty && <button className="ds-primary" onClick={() => void save()}>Сохранить</button>}</div></section>
       : <section className="fl-detail">
         <header className="fl-head">
