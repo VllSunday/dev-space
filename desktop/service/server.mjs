@@ -22,7 +22,7 @@ import { QuickActions } from './quick-actions.mjs';
 import { defaultVoiceStyle, voiceSession } from './voice-profile.mjs';
 import { NativeSettings } from './native-settings.mjs';
 import { McpInventory } from './mcp.mjs';
-import { body, equalSecret, json, publicError, readJson, realFile, saveJson, secret } from './util.mjs';
+import { body, equalSecret, json, publicError, readJson, realFile, saveJson, secret, sleep } from './util.mjs';
 import { ProjectAdapterRegistry } from './project-adapters/registry.mjs';
 import { KnowledgeManager, MarkdownKnowledgeProvider } from './knowledge/providers.mjs';
 import { IntegrationManager } from './integrations/manager.mjs';
@@ -34,7 +34,15 @@ import { projectKey, recentProjects } from './recent-projects.mjs';
 import { answerPrompt, readPrompt } from './terminal-prompt.mjs';
 import { rewindToMessage } from './message-edit.mjs';
 import { LocalReadAloud } from './local-read-aloud.mjs';
-import { Handoffs } from './handoff.mjs';
+import { Handoffs, continuation } from './handoff.mjs';
+import { Plugins } from './plugins/registry.mjs';
+import { Operations } from './plugins/operations.mjs';
+import { roles as connectionRoles } from './plugins/roles.mjs';
+import { Flows } from './flows/engine.mjs';
+import { createCommands } from './commands.mjs';
+import { AgentApi } from './agent-api.mjs';
+import { boardPresets } from './boards.mjs';
+import { taskThing } from './things.mjs';
 import { chatCommands } from './chat-commands.mjs';
 import { isThemePreference } from './appearance.mjs';
 import { validateLayout } from './pane-layout.mjs';
@@ -43,7 +51,7 @@ import { configureWhisper, localWhisperSettings } from './local-whisper-settings
 
 const listen = server => new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)); });
 
-export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, localWhisperCheck }) {
+export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, localWhisperCheck, pluginFetch, allowFileGit = false }) {
   repo = await realpath(repo);
   stateDir ||= path.join(repo, '.devspace');
   const fonts = new CustomFonts(stateDir);
@@ -112,7 +120,64 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     if (selectedId === id) { selectedId = sessions.active()[0]?.id || null; settings.selectedId = selectedId; scheduleSettings(); broadcast('selection', { selectedId }); }
     return { closed: true, savedInHistory: true };
   };
-  const handoffs = new Handoffs({ repo, sessions, transcripts, opened: async(id,sourceId)=>{await bindAgentSpace(id,sessionSpaceId(settings,sourceId));focus(id)}, changed: (id, handoff) => broadcast('handoff', { id, handoff }) });
+  // ── Plugins, the command pool and flows ──
+  const plugins = await new Plugins({ repo, allowFileGit, changed: () => broadcast('plugins-changed', {}) }).init();
+  const operations = await new Operations({ plugins, repo, stateDir, fetch: pluginFetch, native: {
+    'tasks.list': async (_, context) => ({ items: (await devspace.read()).tasks.filter(task => task.projectId === context.projectId).map(taskThing) }),
+    'tasks.setStatus': async ({ id, status }, context) => {
+      if (!(await devspace.read()).tasks.some(task => task.id === id && (!context.projectId || task.projectId === context.projectId))) throw Object.assign(new Error('Задача не найдена в проекте.'), { status: 404 });
+      await devspace.mutate({ action: 'update-task', id, status: { todo: 'todo', doing: 'working', done: 'done' }[status] }, { latest: true });
+      return { ok: true, result: status };
+    },
+  } }).init();
+  const quiet = async (id, limit = 30000) => { for (const until = Date.now() + limit; Date.now() < until;) { const session = sessions.get(id); if (session.status === 'running' && Date.now() - Date.parse(session.lastOutputAt || session.createdAt) > 1500) return; await sleep(300); } };
+  // Delivers one line to an agent's terminal and submits it. A person typing in
+  // that terminal at the same moment is not interrupted: the line waits.
+  const sendLine = async (id, text) => { for (let attempt = 0; ; attempt++) { try { return sessions.input(id, text, { coordinator: true, submit: true }); } catch (error) { if (attempt >= 4 || !/typing/.test(error.message)) throw error; await sleep(2600); } } };
+  const openAgent = async ({ agent, name, cwd, spaceId, line, readDir }) => {
+    const first = line && ['codex', 'claude'].includes(agent) && line.length <= 4000 && !/["\x00-\x1f\x7f]/.test(line);
+    const session = await sessions.create({ agent, cwd, name, bypass: settings.defaultBypass === true, ...(first ? { initialPrompt: line, readDir } : {}) });
+    await bindAgentSpace(session.id, settings.agentSpaces.some(space => space.id === spaceId) ? spaceId : settings.selectedAgentSpaceId);
+    if (line && !first) quiet(session.id).then(() => sendLine(session.id, line)).catch(error => broadcast('service-error', { error: publicError(error) }));
+    return session.id;
+  };
+  let flows;
+  const commands = createCommands({
+    repo, sessions, devspace, plugins, operations, flows: () => flows, settings: () => settings, openAgent, send: sendLine,
+    spaceOf: id => id ? sessionSpaceId(settings, id) : settings.selectedAgentSpaceId, broadcast, changed: () => broadcast('devspace-changed', {}),
+    continueChat: async (sessionId, file) => {
+      const source = sessions.get(sessionId), next = continuation(source.name, file);
+      const id = await openAgent({ agent: source.agent, cwd: source.cwd, name: next.name, spaceId: sessionSpaceId(settings, sessionId), line: next.prompt, readDir: path.dirname(file) });
+      focus(id);
+      return { sessionId: id, file, summary: 'Открыт новый чат с заметкой.' };
+    },
+    // After a plugin made by words is accepted, it is put where it was asked for.
+    placePlugin: async (plugin, input) => {
+      const state = await devspace.read(), board = state.boards.find(item => item.id === input.boardId);
+      if (!board) return;
+      const view = plugin.views.find(item => item.level === 'zone'), look = plugin.boards[0];
+      if (look) await devspace.mutate({ action: 'board-update', boardId: board.id, kind: `${plugin.id}/${look.id}` }, { latest: true });
+      if (!view) return;
+      if (board.zones.some(zone => zone.id === input.zoneId)) await devspace.mutate({ action: 'zone-update', boardId: board.id, zoneId: input.zoneId, view: `${plugin.id}/${view.id}` }, { latest: true });
+      else await devspace.mutate({ action: 'zone-create', boardId: board.id, name: view.title, view: `${plugin.id}/${view.id}`, source: view.accepts.includes('task') ? { kind: 'tasks' } : view.accepts.includes('page') ? { kind: 'pages' } : { kind: 'topic', topicId: 'all' } }, { latest: true });
+    },
+  });
+  const agentApi = await new AgentApi({ stateDir, sessions, commands }).init();
+  flows = await new Flows({ repo, stateDir, plugins, operations, host: {
+    command: (name, args, context) => commands.run(name, args, context),
+    project: async id => { const project = (await devspace.read()).projects.find(item => item.id === id); if (!project) throw Object.assign(new Error('Проект не найден.'), { status: 404 }); return project; },
+    session: id => sessions.items.get(id) || null,
+    agentAvailable: agent => inventory().some(item => item.id === agent && item.available && item.id !== 'shell'),
+    currentSpace: () => settings.selectedAgentSpaceId,
+    createSpace: async (name, cwd) => { await changeAgentSpaces(settings, { action: 'create', name, cwd }, sessions.list()); const space = settings.agentSpaces.at(-1); settings.selectedAgentSpaceId = space.id; await saveSettings(); broadcast('settings', { settings }); return space.id; },
+    openAgent, send: sendLine,
+  } }).init();
+  flows.on('run', run => broadcast('flow-run', { run }));
+  flows.on('library', () => broadcast('flows-changed', {}));
+  const completions = new Map();
+  sessions.on('session', session => { const previous = completions.get(session.id); completions.set(session.id, { completionVersion: session.completionVersion }); flows.sessionChanged(session, previous); });
+  const handoffs = new Handoffs({ flows, sessions, spaceOf: id => sessionSpaceId(settings, id), changed: (id, handoff) => broadcast('handoff', { id, handoff }),
+    projectFor: async session => { const state = await devspace.read(); return (state.projects.find(project => path.resolve(project.path) === path.resolve(session.cwd)) || state.projects.find(project => project.id === settings.spaceLayout?.projectId) || state.projects[0]).id; } });
   const attach = async (id, paths, coordinator = false) => {
     const session = sessions.get(id);
     const verified = await attachments.paths(paths);
@@ -202,6 +267,17 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const contentServer = http.createServer(async (request, response) => {
     try {
       if (request.headers.host !== new URL(files.origin).host || !['GET', 'HEAD'].includes(request.method)) throw Object.assign(new Error('Not allowed'), { status: 403 });
+      // A plugin view with its own code. It is served from this separate origin
+      // with a sandbox policy: no access to the app, no disk, and network only to
+      // the hosts the plugin declared.
+      const pluginView = /^\/plugin-view\/([\w-]+)\/([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(new URL(request.url, files.origin).pathname);
+      if (pluginView) {
+        if (!equalSecret(pluginView[1], files.repoGrant)) throw Object.assign(new Error('Not allowed'), { status: 403 });
+        const { html, hosts } = await plugins.viewCode(pluginView[2], pluginView[3]);
+        const page = `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="dark"><style>html{color-scheme:dark;background:transparent}</style><script>addEventListener('message',e=>{if(e.data&&e.data.type==='devspace:data'&&e.data.theme)for(const k in e.data.theme)document.documentElement.style.setProperty(k,e.data.theme[k])})</script>${html}`;
+        response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': `sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src ${hosts.length ? hosts.map(host => 'https://' + host).join(' ') : "'none'"}; form-action 'none'; base-uri 'none'` });
+        response.end(request.method === 'HEAD' ? undefined : page); return;
+      }
       await files.content(request, response, new URL(request.url, files.origin));
     } catch (error) { if (!response.headersSent) json(response, error.status || 404, { error: publicError(error) }); }
   });
@@ -221,6 +297,12 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       // is issued only through an authorized messages request for this chat.
       const media = /^\/media\/([a-f0-9-]{36})\/([a-zA-Z0-9_-]{43})$/.exec(url.pathname);
       if (media && ['GET', 'HEAD'].includes(request.method)) return await conversationMedia.serve(request, response, media[1], media[2], 'desktop', url.searchParams.get('download') === '1');
+      // The `devspace` command. It carries a per-terminal token and reaches only
+      // the command pool, never the rest of the API.
+      if (url.pathname === '/agent/command' && request.method === 'POST') {
+        if (request.headers.origin) throw Object.assign(new Error('Not allowed'), { status: 403 });
+        return json(response, 200, { result: await agentApi.handle(request.headers['x-devspace-token'], await body(request, 256 * 1024)) });
+      }
       if (url.pathname.startsWith('/api/')) {
         authorize(request);
         const method = request.method;
@@ -279,6 +361,27 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'PUT' && url.pathname === '/api/devspace/drafts') return json(response, 200, await devspace.saveDraft(data));
         if (method === 'POST' && url.pathname === '/api/devspace/files/import') return json(response,201,await devspace.importFile(data.path));
         if (method === 'POST' && url.pathname === '/api/devspace') return json(response, 200, await devspace.mutate(data));
+        // ── Boards, plugins and connections ──
+        if (method === 'GET' && url.pathname === '/api/board-presets') return json(response, 200, boardPresets);
+        if (method === 'GET' && url.pathname === '/api/plugins') return json(response, 200, { plugins: plugins.list(), catalog: plugins.catalog(), drafts: await plugins.drafts(), connections: operations.list(), roles: Object.values(connectionRoles), viewBase: `${files.origin}/plugin-view/${files.repoGrant}` });
+        if (method === 'POST' && url.pathname === '/api/plugins/inspect') return json(response, 200, await plugins.inspect(data.source));
+        if (method === 'POST' && url.pathname === '/api/plugins/install') return json(response, 200, await plugins.install(data.ticket));
+        if (method === 'POST' && url.pathname === '/api/plugins/uninstall') return json(response, 200, await plugins.uninstall(data.id));
+        if (method === 'POST' && url.pathname === '/api/plugins/drafts/discard') return json(response, 200, await plugins.discardDraft(data.id));
+        if (method === 'POST' && url.pathname === '/api/connections') { const result = await operations.configure(data.id, { settings: data.settings, secret: data.secret }); broadcast('plugins-changed', {}); return json(response, 200, result); }
+        if (method === 'GET' && url.pathname === '/api/connections/items') { const connection = operations.find(url.searchParams.get('id')).connection; return json(response, 200, await operations.call(url.searchParams.get('id'), connection.plays?.operations.list || 'list', {}, { projectId: url.searchParams.get('projectId') })); }
+        // A view asks to change a thing that lives in a connection. Only the role's
+        // status change is offered to views.
+        if (method === 'POST' && url.pathname === '/api/connections/status') { const result = await operations.callRole(data.id, operations.find(data.id).connection.plays?.role, 'setStatus', { id: String(data.itemId), status: data.status }, { projectId: data.projectId }); broadcast('devspace-changed', {}); return json(response, 200, result); }
+        // ── Flows ──
+        if (method === 'GET' && url.pathname === '/api/flows') return json(response, 200, { flows: await flows.library(), drafts: await flows.drafts(), blocks: flows.describeBlocks(), runs: flows.list(), reference: await commands.run('help', {}, {}), commands: commands.list() });
+        if (method === 'POST' && url.pathname === '/api/flows/validate') { let raw = null; try { raw = JSON.parse(data.text); } catch (error) { return json(response, 200, { ok: false, problems: [{ step: null, text: 'Текст не читается как JSON: ' + error.message }], flow: null, order: [] }); } const entry = flows.entry(raw?.id || 'draft', raw, 'draft', ''); return json(response, 200, { ok: entry.ok, problems: entry.problems, flow: entry.flow, order: entry.order }); }
+        if (method === 'PUT' && url.pathname === '/api/flows') return json(response, 200, await flows.save(data.id, data.text));
+        if (method === 'DELETE' && url.pathname === '/api/flows') return json(response, 200, await flows.remove(data.id));
+        if (method === 'POST' && url.pathname === '/api/flows/drafts') return json(response, 200, data.action === 'accept' ? await flows.acceptDraft(data.id) : await flows.discardDraft(data.id));
+        if (method === 'POST' && url.pathname === '/api/flows/launch') return json(response, 201, await flows.launch({ flowId: data.flowId, projectId: data.projectId, roles: data.roles, needs: data.needs, space: data.space || {}, input: data.input || {} }));
+        if (method === 'POST' && url.pathname === '/api/flows/decide') return json(response, 200, await flows.decide(data.runId, data.output, data.note));
+        if (method === 'POST' && url.pathname === '/api/flows/resolve') return json(response, 200, await flows.resolve(data.runId, data.action));
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
         if (method === 'POST' && url.pathname === '/api/dictation/local') {
           if (whisperSetupBusy || dictation.controllers?.size) throw Object.assign(Error('Дождитесь завершения текущей проверки или распознавания.'), { status: 429 });
@@ -386,6 +489,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (data.spaceLayout && typeof data.spaceLayout === 'object') { const value=data.spaceLayout; settings.spaceLayout={projectId: String(value.projectId||'').slice(0,100),topicId:String(value.topicId||'all').slice(0,100),collapsed:!!value.collapsed,agentOpen:!!value.agentOpen,agentWidth:Math.max(320,Math.min(1400,Number(value.agentWidth)||500)),agentWide:!!value.agentWide,toolsWidth:Math.max(320,Math.min(10000,Number(value.toolsWidth)||settings.spaceLayout?.toolsWidth||520))}; }
           if (inventory().some(item => item.id === data.defaultAgent)) settings.defaultAgent = data.defaultAgent;
           if (typeof data.defaultBypass === 'boolean') settings.defaultBypass = data.defaultBypass;
+          if (typeof data.allowDevspaceCommand === 'boolean') settings.allowDevspaceCommand = data.allowDevspaceCommand;
           if (Number.isInteger(data.terminalFontSize) && data.terminalFontSize >= 10 && data.terminalFontSize <= 24) settings.terminalFontSize = data.terminalFontSize;
           if (['focus', 'original'].includes(data.terminalAppearance)) settings.terminalAppearance = data.terminalAppearance;
           if (typeof data.terminalOptionMeta === 'boolean') settings.terminalOptionMeta = data.terminalOptionMeta;
@@ -443,7 +547,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
             const { supported, userMessages = 0, truncated = false, model = null } = await transcripts.read(sessions.get(id));
             return json(response, 200, { supported, userMessages, truncated, model, handoff: handoffs.state(id) });
           }
-          if (method === 'POST' && action === 'handoff') return json(response, 200, handoffs.start(id));
+          if (method === 'POST' && action === 'handoff') return json(response, 200, await handoffs.start(id));
           if (method === 'POST' && action === 'prompt') return json(response, 200, await answerPrompt(sessions, id, data.id, data.choice));
           if (method === 'POST' && action === 'rewind') return json(response, 200, await rewindToMessage(sessions, transcripts, id, String(data.messageId || '')));
           if (method === 'POST' && action === 'speak') {
@@ -527,6 +631,8 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   });
   const origin = await listen(server);
   files.uiOrigin = origin;
+  sessions.extraEnvironment = (session, env) => agentApi.environment(session, origin, env);
+  sessions.allowDevspace = () => settings.allowDevspaceCommand === true;
   mobile = await new MobileGateway({ ...mobileOptions, transcripts, readAloud, dictation, chooseDictation, repo, uiDir, stateDir, sessions, attachments, closeChat, settings: () => settings, changed: state => broadcast('mobile-state', { mobile: state }) }).init();
   const wss = new WebSocketServer({ noServer: true, maxPayload: 128 * 1024 });
   server.on('upgrade', (request, socket, head) => {
@@ -567,11 +673,11 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   try { watcher = watch(path.join(repo, 'workspace', 'workspace.json'), () => broadcast('workspace-changed', {})); watcher.on('error', () => {}); } catch { /* Registry may be created after first setup. */ }
   const restoreTimer = restoreSessions ? setTimeout(() => sessions.restore().catch(error => sessions.emit('service-error', error)), 100) : null;
   return {
-    origin, contentOrigin: files.origin, token, sessions, coordinator, quick, workspace, cards, files, projects, knowledge, integrations, mobile,
+    origin, contentOrigin: files.origin, token, sessions, coordinator, quick, workspace, cards, files, projects, knowledge, integrations, mobile, devspace, plugins, operations, flows, commands, agentApi,
     urls: { workspace: `${origin}/?desktop=1&surface=workspace&token=${token}`, chats: `${origin}/?desktop=1&surface=chats&token=${token}` },
       nativeMessage: event => nativeSettings.receive(event),
       async close() {
-        if (closing) return; closing = true; mcp.close(); nativeSettings.close(); await files.writes.catch(() => {});
+        if (closing) return; closing = true; agentApi.close(); mcp.close(); nativeSettings.close(); await files.writes.catch(() => {});
       watcher?.close(); clearTimeout(restoreTimer); coordinator.close(); clearTimeout(settingsTimer); await saveSettings(); await transcriptSave; await quick.saves; await workspace.writes;
       dictation.close(); await mobile.close();
       for (const ws of wss.clients) ws.terminate();

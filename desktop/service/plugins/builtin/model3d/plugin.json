@@ -1,0 +1,7 @@
+{
+  "plugin": 1, "id": "model3d", "name": "3D-просмотр", "version": "1.0.0",
+  "description": "Открывает модели GLB: вращение, масштаб, сетка и нормали.",
+  "views": [
+    { "id": "viewer", "title": "3D-просмотр", "level": "thing", "accepts": ["model"], "actions": ["thing.open"], "render": { "type": "native", "component": "model" } }
+  ]
+}

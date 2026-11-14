@@ -51,7 +51,8 @@ checks/*-profile/
 
 # Superseded starter documentation and unused identity assets.
 # They remain in the local reference copy, outside the new source history.
-/docs/
+/docs/*
+!/docs/redesign/
 /design/DESIGN.md
 /design/PRODUCT.md
 /design/IMPLEMENTATION.md

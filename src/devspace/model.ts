@@ -9,7 +9,10 @@ export interface PageCollection { topicId: string; view: 'list'|'tiles'|'gallery
 export type PageNode = {id:string;type:'title'} | {id:string;type:'block';blockId:string} | ({id:string;type:'collection'} & PageCollection)
 export interface Page { id: string; projectId: string; topicId: string; title: string; icon?: string; blocks: Block[]; sourceIds: string[]; revision: number; layout: 'document'|'wiki'; updated: string; collections?: PageCollection[]; flow?: PageNode[] }
 export interface Task { id: string; projectId: string; topicId: string; title: string; status: 'todo'|'working'|'review'|'done'; sourceId?: string }
-export interface SpaceState { schemaVersion: 1; revision: number; projects: Project[]; materials: Material[]; pages: Page[]; tasks: Task[] }
+export type ZoneSource = {kind:'topic';topicId:string} | {kind:'pages'} | {kind:'tasks'} | {kind:'outline'} | {kind:'refs';refs:string[]} | {kind:'connection';connectionId:string}
+export interface Zone { id: string; name: string; color?: string|null; icon?: string; x: number; y: number; w: number; h: number; collapsed?: boolean; hidden?: boolean; view: string; source: ZoneSource; pinnedIds?: string[]; options?: Record<string,unknown> }
+export interface Board { id: string; projectId: string; name: string; kind: string; zones: Zone[] }
+export interface SpaceState { schemaVersion: 1; revision: number; projects: Project[]; materials: Material[]; pages: Page[]; tasks: Task[]; boards: Board[] }
 export interface Proposal { id: string; projectId: string; title: string; blocks: Block[]; sourceIds: string[]; layout: 'document'|'wiki'; baseRevision: number; stale: boolean; error?: string }
 export const newId = () => 'block-'+crypto.randomUUID().slice(0,12)
 export const blockNames: Record<BlockType,string> = {text:'Текст',heading:'Заголовок',bullet:'Список',check:'Чек-лист',quote:'Заметка',code:'Код',image:'Изображение',divider:'Разделитель',model:'3D-модель'}

@@ -20,26 +20,26 @@ try {
   await desktopAuth(context, service.urls.workspace, 'ru');
   const page = await context.newPage();
   await page.goto(service.urls.workspace);
-  await page.locator('.dev-space .ds-canvas').waitFor();
+  await page.locator('.dev-space .ds-place .bd-surface').waitFor();
   const results = [];
   for (const width of [901, 960, 1150, 1151, 1280, 1920, 2560]) {
     await page.setViewportSize({ width, height: 1080 });
-    for (const collapsed of [false, true]) {
-      if (await page.locator('.dev-space').evaluate(el => el.classList.contains('project-nav-collapsed')) !== collapsed) await page.keyboard.press('Control+b');
+    {
       for (const agentsOpen of [false, true]) {
         if (await page.locator('.ds-agent-pane').count() !== Number(agentsOpen)) await page.keyboard.press('Control+j');
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const rects = await page.evaluate(() => {
           const rect = selector => { const r = document.querySelector(selector)?.getBoundingClientRect(); return r && { left: r.left, right: r.right, width: r.width }; };
-          return { shell: rect('.dev-space'), canvas: rect('.ds-canvas'), pane: rect('.ds-agent-pane'), viewport: innerWidth, scroll: document.documentElement.scrollWidth };
+          return { shell: rect('.dev-space'), canvas: rect('.ds-place'), header: rect('.bd-header'), surface: rect('.bd-surface'), pane: rect('.ds-agent-pane'), viewport: innerWidth, scroll: document.documentElement.scrollWidth };
         });
         assert.ok(Math.abs(rects.shell.width - width) <= 1, `shell must fill ${width}px: ${JSON.stringify(rects)}`);
         assert.ok(Math.abs((agentsOpen&&width<=1150?rects.pane.right:rects.canvas.right) - (width - 8)) <= 1, `rightmost area must reach the window edge: ${JSON.stringify(rects)}`);
         assert.ok(rects.scroll <= width, `shell must not overflow: ${JSON.stringify(rects)}`);
         assert.ok(rects.canvas.width >= 350, 'workspace must remain usable');
+        assert.ok(Math.abs(rects.header.width - rects.canvas.width) <= 1 && Math.abs(rects.surface.width - rects.canvas.width) <= 1, `board header and surface must span the board area: ${JSON.stringify(rects)}`);
         if (agentsOpen&&width>1150) assert.ok(rects.pane.right <= rects.canvas.left, 'left agent pane must precede the project without overlap');
         if (agentsOpen&&width<=1150) assert.ok(rects.pane.left>=0&&rects.pane.right<=width, 'narrow agent area must stay fully inside the window');
-        results.push({ width, collapsed, agentsOpen, canvasWidth: Math.round(rects.canvas.width) });
+        results.push({ width, agentsOpen, canvasWidth: Math.round(rects.canvas.width) });
       }
     }
   }

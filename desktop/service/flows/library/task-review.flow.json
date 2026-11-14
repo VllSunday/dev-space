@@ -1,0 +1,27 @@
+{
+  "flow": 1,
+  "id": "task-review",
+  "name": "Задача → работа → ревью → решение",
+  "description": "Берёт задачу из трекера, отдаёт исполнителю, результат сверяет другой агент, последнее слово за вами. Статус в трекере меняет код.",
+  "roles": { "author": { "title": "Исполнитель" }, "reviewer": { "title": "Проверяющий" } },
+  "needs": { "tracker": { "role": "tracker" } },
+  "limits": { "handoffs": 8 },
+  "start": "take",
+  "steps": {
+    "take": { "block": "input", "with": { "from": "tracker", "need": "tracker" }, "next": { "taken": "start", "empty": "@stopped" } },
+    "start": { "title": "В работу", "block": "action", "with": { "need": "tracker", "operation": "setStatus", "status": "doing" }, "next": { "ok": "work", "failed": "@person" } },
+    "work": {
+      "block": "work",
+      "with": { "role": "author", "task": "Сделай задачу из данных ниже в рабочей папке проекта. В итоге коротко опиши, что изменено и как это проверить." },
+      "next": { "done": "check", "blocked": "@person" }
+    },
+    "check": {
+      "block": "review",
+      "with": { "role": "reviewer", "task": "Проверь работу исполнителя по задаче из данных ниже: сделано ли то, что просили, и не сломано ли соседнее. Сам ничего не исправляй." },
+      "next": { "clean": "me", "remarks": "work" },
+      "limit": { "remarks": 2 }
+    },
+    "me": { "block": "person", "with": { "question": "Принять работу по задаче?", "apply": "nothing" }, "next": { "accept": "close", "return": "work" }, "limit": { "return": 3 } },
+    "close": { "title": "Завершить", "block": "action", "with": { "need": "tracker", "operation": "setStatus", "status": "done" }, "next": { "ok": "@done", "failed": "@person" } }
+  }
+}

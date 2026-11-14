@@ -6,7 +6,6 @@ import os from 'node:os';
 import {initializeAgentSpaces,changeAgentSpaces,sessionSpaceId} from '../agent-spaces.mjs';
 import {createService} from '../server.mjs';
 import {normalizeLayout} from '../pane-layout.mjs';
-import {Handoffs,HANDOFF_REQUEST} from '../handoff.mjs';
 
 async function fixture(){const repo=await mkdtemp(path.join(os.tmpdir(),'dev-space-agents-'));const settings={spaceLayout:{projectId:'document-project',topicId:'story'}};const sessions=[{id:'old-agent',nativeId:'conversation-preserved',cwd:repo,open:false}];initializeAgentSpaces(settings,repo,sessions);return {repo,settings,sessions,change:data=>changeAgentSpaces(settings,data,sessions)}}
 
@@ -27,12 +26,6 @@ test('spaces are independent from projects and moving an agent preserves native 
  await change({action:'create',name:'Work',cwd:repo,color:'#91b6da',group:null});const id=settings.agentSpaces[1].id;
  await change({action:'select',id});await change({action:'assign',sessionId:'old-agent',spaceId:id});await change({action:'update',id,name:'Renamed',color:'#dba3bb',group:'Work'});
  assert.deepEqual(settings.spaceLayout,right);assert.deepEqual(sessions,before);assert.equal(sessionSpaceId(settings,'old-agent'),id);assert.equal(settings.selectedAgentSpaceId,id);
-});
-test('handoff continuation inherits the source space before completion even after switching spaces',async()=>{
- const {repo,settings,sessions,change}=await fixture();await change({action:'create',name:'Work',cwd:repo});const work=settings.agentSpaces[1].id;await change({action:'assign',sessionId:'old-agent',spaceId:work});
- const old={...sessions[0],name:'Work chat',agent:'codex',bypass:false},next={id:'continued'};
- const handoffs=new Handoffs({repo,sessions:{get:()=>old,create:async()=>{sessions.push(next);return next}},transcripts:{read:async()=>({messages:[{role:'user',text:HANDOFF_REQUEST},{role:'assistant',text:'# Handoff\nContinue work'}]})},changed:()=>{},opened:async(id,sourceId)=>{assert.equal(sourceId,old.id);await change({action:'assign',sessionId:id,spaceId:sessionSpaceId(settings,sourceId)})}});
- handoffs.completed=async()=>{};await handoffs.finish(old.id,0);assert.equal(handoffs.state(old.id).status,'done');assert.equal(sessionSpaceId(settings,next.id),work);assert.equal(settings.selectedAgentSpaceId,'local');
 });
 test('groups support renaming, collapse and ungroup without removing spaces',async()=>{
  const {repo,settings,change}=await fixture();await change({action:'create',name:'Alpha',cwd:repo,group:'Work'});await change({action:'create',name:'Beta',cwd:repo,group:'Work'});

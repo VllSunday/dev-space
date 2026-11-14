@@ -1,0 +1,22 @@
+{
+  "flow": 1,
+  "id": "plugin-by-words",
+  "name": "Плагин словами",
+  "description": "Вы описываете, что хотите видеть и откуда брать данные. Агент собирает плагин, код проверяет его, а вы видите его на примере данных вместе с правами.",
+  "roles": { "builder": { "title": "Сборщик" } },
+  "limits": { "handoffs": 6 },
+  "start": "take",
+  "steps": {
+    "take": { "block": "input", "with": { "from": "words" }, "next": { "taken": "build", "empty": "@stopped" } },
+    "build": {
+      "block": "work",
+      "with": {
+        "role": "builder",
+        "task": "Собери плагин Dev Space по просьбе пользователя ниже. Сначала попробуй собрать вид из готовых деталей, без кода; код пиши, только если деталей не хватает. Проси у вида только те действия, которые ему нужны. Приложи пример данных, на котором вид хорошо читается.",
+        "expects": "plugin-draft"
+      },
+      "next": { "done": "me", "blocked": "@person" }
+    },
+    "me": { "block": "person", "with": { "question": "Установить плагин?" }, "next": { "accept": "@done", "return": "build" }, "limit": { "return": 3 } }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "flow": 1,
+  "id": "flow-by-words",
+  "name": "Флоу словами",
+  "description": "Вы описываете процесс или правку словами. Агент собирает флоу из блоков, код проверяет, что он заканчивается и не зацикливается.",
+  "roles": { "builder": { "title": "Сборщик" } },
+  "limits": { "handoffs": 6 },
+  "start": "take",
+  "steps": {
+    "take": { "block": "input", "with": { "from": "words" }, "next": { "taken": "build", "empty": "@stopped" } },
+    "build": {
+      "block": "work",
+      "with": {
+        "role": "builder",
+        "task": "Собери или измени флоу Dev Space по просьбе пользователя ниже. Используй только блоки из справочника. Если просят изменить существующий флоу, сохрани его ID и всё, что не просили менять; текущий файл посмотри командой devspace flow list и в папке флоу.",
+        "expects": "flow-draft"
+      },
+      "next": { "done": "me", "blocked": "@person" }
+    },
+    "me": { "block": "person", "with": { "question": "Сохранить флоу в библиотеку?" }, "next": { "accept": "@done", "return": "build" }, "limit": { "return": 3 } }
+  }
+}

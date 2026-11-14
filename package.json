@@ -26,6 +26,7 @@
     "skills:sync": "node scripts/sync-skills.mjs",
     "skills:pack": "node scripts/run-python.mjs scripts/package_skills.py",
     "test:layout": "node checks/layout-ui.mjs",
+    "test:board": "node checks/board-ui.mjs && node checks/flows-ui.mjs",
     "prebuild": "node scripts/prepare-model-assets.mjs",
     "postbuild": "node scripts/prepare-model-assets.mjs --dist"
   },
