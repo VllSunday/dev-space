@@ -186,3 +186,5 @@
 .dev-space .bd-elsewhere button:hover{color:var(--ds-text)}.dev-space .bd-elsewhere small{color:var(--ds-faint)}
 .dev-space .bd-selection select{padding:5px 8px;max-width:170px}
 .dev-space .pv-row[draggable=true],.dev-space .pv-item[draggable=true]{cursor:grab}
+.dev-space .bd-canvas.short{min-height:0}
+.dev-space .bd-welcome{margin-top:8px}

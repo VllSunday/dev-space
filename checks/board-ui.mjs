@@ -35,6 +35,7 @@ try {
   await expect(page.locator('.ds-places button')).toHaveText(['Проект', 'Флоу', 'Плагины']);
   await expect(page.locator('.ds-project-sidebar')).toHaveCount(0);
   await expect(page.locator('.bd-welcome h2')).toHaveText('Это доска проекта');
+  await expect(page.locator('.bd-welcome')).toBeInViewport({ ratio: 1 });
   await shot('board-first-run');
   await page.getByRole('button', { name: 'Посмотреть пример', exact: true }).click();
   await expect(page.locator('.bd-zone')).toHaveCount(8);

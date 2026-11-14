@@ -173,7 +173,7 @@ export function BoardSurface({ api, welcome }: { api: BoardApi; welcome?: ReactN
   })
   return <div className={`bd-surface bg-${kind.look.background || 'dots'} zone-${kind.look.zone || 'card'} density-${kind.look.density || 'cozy'} layout-${kind.layout}`} ref={surface} onPointerDown={pan} style={kind.look.accent ? { '--bd-accent': kind.look.accent } as CSSProperties : undefined}>
     {!board.zones.length ? <div className="bd-blank"><h2>На этой доске пока пусто</h2><p>Доска состоит из зон. Зона — это группа вещей с вашим названием: заметки, картинки, модели, документы или задачи.</p><p className="ds-muted">Нажмите «Добавить» вверху: создайте зону или опишите словами, что хотите здесь видеть.</p></div>
-      : free ? <div className="bd-canvas" style={{ width, height }}>{kind.links && <Links zones={visible} boxes={boxes} things={things} data={data} />}{cards}</div>
+      : free ? <div className={'bd-canvas' + (welcome ? ' short' : '')} style={{ width, height: welcome ? height - 140 : height }}>{kind.links && <Links zones={visible} boxes={boxes} things={things} data={data} />}{cards}</div>
       : <div className="bd-flow">{cards}</div>}
     {welcome}
     {hidden.length > 0 && <footer className="bd-shelf" aria-label="Скрытые зоны"><span>Скрыто</span>{hidden.map(zone => <button type="button" key={zone.id} title="Вернуть на доску" onClick={() => void api.mutate({ action: 'zone-update', boardId: board.id, zoneId: zone.id, hidden: false }).catch(() => {})}><i style={{ background: zone.color || 'var(--ds-faint)' }} />{zone.name}<small>{things[zone.id]?.length || ''}</small></button>)}</footer>}
