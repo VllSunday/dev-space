@@ -96,7 +96,7 @@ function Sandbox({ pluginId, view, things, zoneName, viewBase, handlers }: { plu
     const style = getComputedStyle(document.documentElement), theme: Record<string, string> = {}
     for (const name of ['--ds-text', '--ds-muted', '--ds-faint', '--ds-border', '--ds-accent', '--ds-surface', '--ds-canvas', '--ds-good', '--ds-warning']) theme[name] = style.getPropertyValue(name)
     theme['--ds-font'] = getComputedStyle(document.body).fontFamily
-    frame.current?.contentWindow?.postMessage({ type: 'devspace:data', zone: { name: zoneName }, things: latest.current.things.map(({ paths: _paths, ...thing }) => thing), theme }, '*')
+    frame.current?.contentWindow?.postMessage({ type: 'devspace:data', zone: { name: zoneName }, things: latest.current.things.map(thing => ({ ...thing, paths: undefined })), theme }, '*')
   }
   useEffect(() => {
     const listen = (event: MessageEvent) => {

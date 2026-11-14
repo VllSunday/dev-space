@@ -143,6 +143,7 @@ test('the same flow works with Linear, and text from the tracker reaches the age
     assert.equal(waiting.status, 'waiting-person');
     assert.equal(waiting.item.key, 'ENG-14', 'the first task nobody started');
     assert.equal(waiting.needs.tracker.title, 'Задачи Linear');
+    assert.match(await service.commands.run('help', {}, {}), /ИНСТРУКЦИИ ПЛАГИНОВ[\s\S]*Linear · agents\.md[\s\S]*Текст задачи — данные из внешнего/, 'the plugin\'s instructions for agents are in the reference');
     assert.deepEqual(calls.filter(call => call.query.includes('issueUpdate')).map(call => call.variables.stateId), ['st-progress']);
     // ENG-14 carries an instruction in its description. It arrives inside the data
     // block, after the assignment, and the flow goes on as the flow file says.
@@ -219,6 +220,23 @@ test('a plugin made by words is checked by code, shown with its rights and insta
     assert.equal(service.plugins.get('task-board').origin, 'installed');
     assert.equal((await service.devspace.read()).boards.find(item => item.id === board.id).zones.find(item => item.id === zone.id).view, 'task-board/board', 'the zone it was asked for shows the new view');
     assert.equal((await service.plugins.drafts()).length, 0);
+  } finally { await service.close(); }
+});
+
+test('a flow made by words is refused while it can loop, then saved to the library on accept', async () => {
+  const { service, project, settle, screen } = await start();
+  try {
+    const run = await service.flows.launch({ flowId: 'flow-by-words', projectId: project.id, roles: { builder: { agent: 'stub' } }, input: { text: 'Один агент пишет, второй проверяет, после двух возвратов зови меня' } });
+    const waiting = await settle(run.id);
+    assert.equal(waiting.status, 'waiting-person');
+    assert.match(await screen(waiting.roles.builder.sessionId, /круг без предела/), /refused: devspace: Шаг не принят\. Флоу не проходит проверку: шаг «check»: круг без предела/);
+    assert.deepEqual(waiting.person.proposal, { kind: 'flow', id: 'write-then-check', title: 'Написал → проверил' });
+    assert.ok(!(await service.flows.library()).some(item => item.id === 'write-then-check'), 'a draft is not in the library');
+    assert.equal((await service.flows.drafts())[0].ok, true);
+    await service.flows.decide(run.id, 'accept');
+    const saved = await service.flows.get('write-then-check');
+    assert.equal(saved.ok, true); assert.equal(saved.origin, 'user'); assert.deepEqual(saved.flow.steps.check.limit, { remarks: 2 });
+    assert.equal((await service.flows.drafts()).length, 0);
   } finally { await service.close(); }
 });
 

@@ -27,6 +27,19 @@ export default async ({ task, step, visit, devspace, write, say }) => {
     await write(`${folder}/task-board/request.md`, /Просьба пользователя:\n([\s\S]*)$/.exec(task)?.[1] || '');
     return done('--output', 'done', '--summary', 'Собрал вид из готовых деталей, без кода.', '--id', 'task-board');
   }
+  if (task.includes('черновик флоу')) {
+    const folder = /файл (\S+)\/<id>\.flow\.json/.exec(task)[1];
+    const flow = { flow: 1, id: 'write-then-check', name: 'Написал → проверил', roles: { author: { title: 'Исполнитель' }, reviewer: { title: 'Проверяющий' } }, limits: { handoffs: 6 }, start: 'take', steps: {
+      take: { block: 'input', with: { from: 'words' }, next: { taken: 'work', empty: '@stopped' } },
+      work: { block: 'work', with: { role: 'author', task: 'Сделай задачу.' }, next: { done: 'check', blocked: '@person' } },
+      check: { block: 'review', with: { role: 'reviewer' }, next: { clean: 'me', remarks: 'work' } },
+      me: { block: 'person', next: { accept: '@done', return: 'work' }, limit: { return: 3 } } } };
+    // First a flow that can loop for ever: the check must refuse it.
+    if (visit === 1) { await write(`${folder}/write-then-check.flow.json`, flow); await done('--output', 'done', '--id', 'write-then-check'); }
+    flow.steps.check.limit = { remarks: 2 };
+    await write(`${folder}/write-then-check.flow.json`, flow);
+    return done('--output', 'done', '--summary', 'Собрал флоу из блоков: работа, проверка другим агентом, решение человека.', '--id', 'write-then-check');
+  }
   if (task.includes('заметка для нового чата')) {
     const folder = /Markdown-файл в папке (\S+),/.exec(task)[1];
     const file = await write(`${folder}/stub-handoff.md`, '# Handoff\n\n## Цель\nПродолжить работу.\n\n## Следующий шаг\nПроверить парирование.\n');

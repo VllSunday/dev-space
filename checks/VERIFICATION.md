@@ -6,7 +6,7 @@ Checked on a headless Linux server (Node 24.22, Chromium through Playwright). No
 native Tauri window, microphone or speech recognition was available; nothing
 here verifies them. A successful build is not evidence that the native app works.
 
-**Build and unit tests.** `npm run build` passed. `npm test` ran 301 tests: 292
+**Build and unit tests.** `npm run build` passed. `npm test` ran 302 tests: 293
 passed, 9 skipped (the same optional Whisper and child-process fixtures as before),
 none failed. New suites: `boards.test.mjs` (migration of a store saved before
 boards without losing data, the kept copy, undo, zone operations, presets),
@@ -28,11 +28,13 @@ service address is unreachable. The stub proves the mechanism, not that a model
 follows it.
 
 **Flows with real CLI agents.** `node checks/flows-real-agent.mjs claude --bypass`
-passed twice on this server with Claude Code 2.1.311: the flow «Материалы →
+passed three times on this server with Claude Code 2.1.311: the flow «Материалы →
 страница» (the agent wrote a 14-block page proposal, code accepted it, the page
-was applied) and «Плагин словами» (the agent built a view from ready parts with
-sample data; the manifest passed and the plugin was installed). The same check
-passed once with Codex CLI 0.163 for «Материалы → страница». All three runs
+was applied), «Плагин словами» (the agent built a view from ready parts with
+sample data; the manifest passed and the plugin was installed) and «Флоу словами»
+(the agent wrote a four-step flow with return limits; the launch check passed and
+the flow was saved to the library). The same check
+passed once with Codex CLI 0.163 for «Материалы → страница». All four runs
 used the CLI's own skip-permissions mode so that nobody had to answer prompts.
 Not checked: a real agent in its default permission mode, where Claude Code asks
 before each `devspace` call unless the launch option is ticked; Codex inside its

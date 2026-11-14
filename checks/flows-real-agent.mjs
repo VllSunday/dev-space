@@ -22,7 +22,7 @@ try {
   let state = await service.devspace.read();
   state = await service.devspace.mutate({ action: 'import-template', templateId: 'wind-islands', baseRevision: state.revision });
   const project = state.projects.at(-1), sources = state.materials.filter(item => item.projectId === project.id && item.topicId.endsWith('world')).slice(0, 3);
-  const input = flowId === 'plugin-by-words' ? { text: 'Покажи задачи зоны доской: слева «надо», посередине «в работе», справа «готово», а сверху — сколько задач готово' } : { things: sources.map(item => 'material:' + item.id), text: 'Коротко, с разделом «Следующий шаг».' };
+  const input = flowId === 'flow-by-words' ? { text: 'Собери флоу: один агент пишет код по задаче словами, второй агент проверяет, замечания возвращаются автору не больше двух раз, потом решение за мной.' } : flowId === 'plugin-by-words' ? { text: 'Покажи задачи зоны доской: слева «надо», посередине «в работе», справа «готово», а сверху — сколько задач готово' } : { things: sources.map(item => 'material:' + item.id), text: 'Коротко, с разделом «Следующий шаг».' };
   const role = Object.keys((await service.flows.get(flowId)).flow.roles)[0];
   const run = await service.flows.launch({ flowId, projectId: project.id, roles: { [role]: { agent } }, input });
   console.log(`Flow «${run.name}» launched with ${agent}${bypass ? ' (bypass)' : ''}. Waiting for the agent…`);
@@ -47,7 +47,8 @@ try {
   if (view.status !== 'waiting-person') { failed = true; }
   else {
     const done = await service.flows.decide(run.id, 'accept');
-    if (flowId === 'plugin-by-words') console.log('Installed plugin: ' + JSON.stringify(service.plugins.list().filter(item => item.origin === 'installed').map(item => ({ id: item.id, name: item.name, views: item.views.map(v => v.render), rights: item.permissions.changes }))));
+    if (flowId === 'flow-by-words') console.log('Saved flows: ' + JSON.stringify((await service.flows.library()).filter(item => item.origin === 'user').map(item => ({ id: item.id, name: item.name, ok: item.ok, steps: Object.entries(item.flow.steps).map(([id, step]) => `${id}:${step.block}${Object.keys(step.limit).length ? ' limit ' + JSON.stringify(step.limit) : ''}`), roles: Object.values(item.flow.roles).map(role => role.title) }))));
+    else if (flowId === 'plugin-by-words') console.log('Installed plugin: ' + JSON.stringify(service.plugins.list().filter(item => item.origin === 'installed').map(item => ({ id: item.id, name: item.name, views: item.views.map(v => v.render), rights: item.permissions.changes }))));
     else { const page = (await service.devspace.read()).pages.at(-1); console.log(`Accepted → page «${page.title}», ${page.blocks.length} blocks, sources ${page.sourceIds.length}; first block: ${page.blocks[0]?.text.slice(0, 160)}`); }
     console.log(done.status === 'done' ? 'PASS: a real agent read the task, handed the step in with devspace, code checked the result, the person applied it' : 'FAIL: ' + done.status);
     failed = done.status !== 'done';
