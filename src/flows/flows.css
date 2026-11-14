@@ -160,3 +160,6 @@
 .dev-space .fl-launch p{margin:0}
 .dev-space .fl-launch code{font:12px Consolas,monospace;color:var(--ds-muted)}
 @media(max-width:1500px){.dev-space .fl-head h1{font-size:21px}}
+.dev-space .fl-more{min-height:0;padding:0 7px;font-size:11px;color:var(--ds-faint);border:1px solid var(--ds-border);border-radius:4px}
+.dev-space .fl-more:hover{color:var(--ds-text)}
+.dev-space .fl-step>header b{white-space:nowrap}.dev-space .fl-step>header small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}

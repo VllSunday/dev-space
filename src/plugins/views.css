@@ -90,3 +90,7 @@
 .dev-space .pv-columns section{min-height:0;padding:6px 7px}
 .dev-space .pv-counter div{padding:5px 9px}.dev-space .pv-counter b{font-size:17px}
 }
+@container (max-width:430px){
+.dev-space .pv-table th:nth-child(n+4),.dev-space .pv-table td:nth-child(n+4){display:none}
+.dev-space .pv-table td,.dev-space .pv-table th{padding-left:5px;padding-right:5px}
+}

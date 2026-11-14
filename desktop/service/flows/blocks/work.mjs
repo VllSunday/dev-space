@@ -1,4 +1,4 @@
-import { runCheck, checkNames } from '../checks.mjs';
+import { runCheck, checkNames, checkTitles } from '../checks.mjs';
 
 // Работа: an agent does the assignment and hands the step in with
 // `devspace step done`. The block checks the result by code before it accepts.
@@ -9,6 +9,7 @@ export default {
     task: { type: 'text', title: 'Задание' },
     expects: { type: 'enum', title: 'Что должен сдать', values: ['nothing', ...checkNames] },
   },
+  labels: { expects: { nothing: 'ничего, кроме отчёта', ...checkTitles } },
   outputs: [{ id: 'done', title: 'Сдал', hint: 'работа сделана' }, { id: 'blocked', title: 'Не может продолжить', hint: 'нужна помощь человека; причину укажи в --summary' }],
   async enter(ctx) {
     const { role, task, expects } = ctx.params, came = ctx.came;

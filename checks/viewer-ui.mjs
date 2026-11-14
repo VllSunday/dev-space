@@ -20,7 +20,7 @@ try{
  await page.locator('.ds-model-viewer input').setInputFiles({name:'triangle.glb',mimeType:'model/gltf-binary',buffer:Buffer.concat([h,j,bh,bin])});
  await expect(page.getByRole('combobox',{name:'Модель',exact:true})).toBeVisible();await expect(page.locator('.ds-model-viewer [role=status]')).toContainText('Вращение',{timeout:20000});
  await page.getByRole('combobox',{name:'Отображение модели'}).selectOption('wire');await page.screenshot({path:'.cache/viewer-desktop.png'});
- await page.reload();await page.getByRole('button',{name:'3d viewer',exact:true}).click();await expect(page.getByRole('combobox',{name:'Модель',exact:true})).toContainText('triangle.glb');
+ await page.reload();await page.locator('header.ds-location').getByRole('button',{name:'Главная',exact:true}).click();await page.locator('.bd-zone[aria-label="Зона Документы"]').getByRole('button',{name:'3d viewer',exact:true}).click();await expect(page.getByRole('combobox',{name:'Модель',exact:true})).toContainText('triangle.glb');
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'.cache/viewer-mobile.png'});
  console.log('PASS: empty state, invalid GLB, upload, rendering, wireframe, persistence, desktop/mobile');
 }finally{await browser?.close();await service.close()}

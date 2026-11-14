@@ -27,8 +27,10 @@ function Connection({ connection, reload, notify, highlight }: { connection: Con
   </section>
 }
 
+let lastPlugin: { type: 'plugin' | 'catalog' | 'role' | 'preview'; id: string } = { type: 'plugin', id: 'core' }
 export default function PluginsPlace({ plugins, flows, focus, notify, openDraft, describe }: { plugins: PluginsState & { reload: () => unknown }; flows: FlowsState; focus: string; notify: (text: string) => void; openDraft: (id: string) => void; describe: () => void }) {
-  const [selected, setSelected] = useState<{ type: 'plugin' | 'catalog' | 'role' | 'preview'; id: string }>({ type: 'plugin', id: 'core' })
+  const [selected, setSelected] = useState(lastPlugin)
+  useEffect(() => { if (selected.type !== 'preview') lastPlugin = selected }, [selected])
   const [source, setSource] = useState(''), [inspection, setInspection] = useState<Inspection | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('')
   // «Настроить» from a launch dialog or the board lands on the connection's plugin.
   useEffect(() => { const connection = plugins.connections.find(item => item.id === focus); if (connection) setSelected({ type: 'plugin', id: connection.pluginId }) }, [focus, plugins.connections.length])

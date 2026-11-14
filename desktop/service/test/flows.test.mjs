@@ -178,6 +178,29 @@ test('a plugin adds a block that flows can use at once, without touching the eng
   } finally { await service.close(); }
 });
 
+test('several at once: each thing gets its own run and its own agent, and the step ends when all have', async () => {
+  const { service, project, state, settle } = await start();
+  try {
+    const flow = { flow: 1, id: 'triage', name: 'Разбор замечаний', roles: { fixer: { title: 'Разборщик' } }, limits: { handoffs: 4 }, start: 'take', steps: {
+      take: { block: 'input', with: { from: 'selection' }, next: { taken: 'fan', empty: '@stopped' } },
+      fan: { block: 'parallel', with: { each: 'fix', max: 2 }, next: { all: 'me', some: '@person' } },
+      fix: { block: 'work', with: { role: 'fixer', task: 'Найди причину и предложи правку.' }, next: { done: '@done', blocked: '@person' } },
+      me: { block: 'person', with: { apply: 'nothing' }, next: { accept: '@done', return: '@stopped' } } } };
+    assert.deepEqual((await service.flows.save('triage', JSON.stringify(flow))).problems, []);
+    const loop = structuredClone(flow); loop.steps.fix.next.done = 'fan';
+    assert.match(service.flows.validate(loop).problems.map(problem => problem.text).join(), /не должна возвращаться к блоку «Несколько сразу»/);
+    const things = state.materials.filter(item => item.projectId === project.id).slice(0, 3).map(item => 'material:' + item.id);
+    const run = await service.flows.launch({ flowId: 'triage', projectId: project.id, roles: { fixer: { agent: 'stub' } }, input: { things } });
+    const waiting = await settle(run.id, item => item.status !== 'running' || item.current === 'me');
+    assert.equal(waiting.status, 'waiting-person');
+    assert.equal(waiting.path.find(entry => entry.step === 'fan').summary, 'Готово 3 из 3.');
+    const children = service.flows.list().filter(item => item.parentId === run.id);
+    assert.deepEqual(children.map(item => item.status), ['done', 'done', 'done']);
+    assert.equal(new Set(children.map(item => item.roles.fixer.sessionId)).size, 3, 'every thing had its own agent');
+    assert.deepEqual(children.map(item => item.item.title).sort(), state.materials.filter(item => item.projectId === project.id).slice(0, 3).map(item => item.title).sort());
+  } finally { await service.close(); }
+});
+
 test('a plugin made by words is checked by code, shown with its rights and installed on accept', async () => {
   const { service, project, state, settle, screen } = await start();
   try {

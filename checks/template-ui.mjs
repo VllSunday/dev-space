@@ -11,18 +11,27 @@ try{
  browser=await launchBrowser({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const context=await browser.newContext({viewport:{width:1500,height:950}});await desktopAuth(context,service.urls.workspace,'ru');
  const page=await context.newPage();await page.goto(service.urls.workspace);
+ const zone=name=>page.locator(`.bd-zone[aria-label="Зона ${name}"]`),row=(name,title)=>zone(name).locator('.pv-row .pv-open').filter({has:page.locator('b',{hasText:new RegExp(`^${title}$`)})});
+ const toBoard=()=>page.locator('header.ds-location').getByRole('button',{name:'Главная',exact:true}).click();
+ await expect(page.locator('.bd-welcome')).toBeVisible();
  await page.getByRole('button',{name:'Посмотреть пример',exact:true}).click();
+ await expect(page.getByRole('combobox',{name:'Проект',exact:true}).locator('option:checked')).toHaveText('Острова ветра · Пример');
+ await expect(page.locator('nav.bd-tabs').getByRole('button',{name:'Главная',exact:true})).toHaveCount(1);
+ for(const name of ['Геймплей','Локации','Ассеты и 3D','Разработка','Референсы','Без темы','Документы','Задачи'])await expect(zone(name)).toHaveCount(1);
+ await expect(zone('Документы').locator('.pv-row')).toHaveCount(6);await expect(row('Документы','3D viewer · Ассеты')).toHaveCount(1);
+ await row('Документы','Острова ветра · Wiki').click();
  await expect(page.locator('.ds-wiki h1')).toHaveText('Острова ветра · Wiki');
  await expect(page.locator('.ds-wiki nav')).toHaveCount(0);
- await expect(page.locator('.ds-navigation').getByRole('button',{name:'Главная',exact:true})).toHaveCount(1);
- await expect(page.locator('.ds-navigation')).toContainText('3D viewer · Ассеты');
  const first=JSON.parse(await readFile(path.join(repo,'workspace/devspace/space.json'),'utf8'));
  expect(first.projects).toHaveLength(2);expect(first.pages).toHaveLength(6);expect(first.materials).toHaveLength(12);expect(service.sessions.items.size).toBe(0);
- await page.locator('.ds-navigation').getByRole('button',{name:'Локации',exact:true}).click();await expect(page.locator('.ds-topic-record')).toHaveCount(4);
- await page.locator('.ds-navigation').getByRole('button',{name:'3D viewer · Ассеты',exact:true}).click();
+ await toBoard();await zone('Локации').locator('.bd-zone-name').click();await expect(page.locator('.bd-desk .pv-row')).toHaveCount(4);
+ await page.locator('.bd-desk .pv-row .pv-open').first().click();await expect(page.locator('main.ds-canvas .ds-topic-record')).toHaveCount(4);
+ await toBoard();await row('Документы','3D viewer · Ассеты').click();
  await expect(page.locator('.ds-model-viewer [role=status]')).toContainText('Вращение',{timeout:20000});
  await page.getByRole('button',{name:'Новый проект',exact:true}).click();
  await page.getByRole('dialog',{name:'Новый проект',exact:true}).getByRole('button',{name:'Открыть учебный проект',exact:true}).click();
+ await expect(page.getByRole('combobox',{name:'Проект',exact:true}).locator('option:checked')).toHaveText('Острова ветра · Пример (2)');
+ await row('Документы','Острова ветра · Wiki').click();
  await expect(page.locator('.ds-wiki h1')).toHaveText('Острова ветра · Wiki');
  await expect(page.getByRole('combobox',{name:'Проект',exact:true})).toContainText('Острова ветра · Пример (2)');
  const after=JSON.parse(await readFile(path.join(repo,'workspace/devspace/space.json'),'utf8'));
@@ -30,5 +39,5 @@ try{
  await page.screenshot({path:'.cache/template-desktop.png'});
   if(await page.locator('.ds-agent-pane').isVisible())await page.getByRole('button',{name:'Свернуть область агентов',exact:true}).click();
  await page.setViewportSize({width:390,height:844});await expect(page.locator('.ds-wiki')).toBeVisible();await page.screenshot({path:'.cache/template-mobile.png'});
- console.log('PASS: first-run example, independent copy, Wiki navigation, bundled GLB, project dialog and no agent launch');
+ console.log('PASS: first-run example, independent copy, board zones, Wiki and topic feed through the board, bundled GLB, project dialog and no agent launch');
 }finally{await browser?.close();await service.close()}

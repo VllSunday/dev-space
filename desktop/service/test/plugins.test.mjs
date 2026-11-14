@@ -19,6 +19,7 @@ test('built-in views are plugins described by the same manifest as third-party o
   assert.deepEqual(list.map(item => item.id).sort(), ['columns', 'core', 'documents', 'model3d', 'tasks']);
   assert.ok(list.every(item => item.origin === 'builtin' && !item.error));
   assert.equal(plugins.view('core/tiles').view.render.type, 'parts');
+  assert.equal(plugins.view('core/feed').view.render.component, 'materials', 'the old topic feed is one more view');
   assert.equal(plugins.view('model3d/viewer').view.accepts[0], 'model');
   assert.equal(plugins.view('tasks/columns').plugin.id, 'tasks');
   assert.ok(list.find(item => item.id === 'columns').boards[0].layout === 'columns', 'a plugin changes the board itself');

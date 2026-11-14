@@ -70,7 +70,9 @@ export function validateFlow(raw, { blocks, roles = {} }) {
   }
 
   if (flow.start && !problems.length) {
-    const ids = Object.keys(flow.steps), edges = id => Object.entries(flow.steps[id].next).filter(([, target]) => flow.steps[target]);
+    // A step also leads to the steps its parameters name, such as the branch of «Несколько сразу».
+    const branches = id => Object.entries(blocks.get(flow.steps[id].block).params).filter(([name, param]) => param.type === 'step' && flow.steps[flow.steps[id].with[name]]).map(([name]) => ['~' + name, flow.steps[id].with[name]]);
+    const ids = Object.keys(flow.steps), edges = id => [...Object.entries(flow.steps[id].next).filter(([, target]) => flow.steps[target]), ...branches(id)];
     // Every step must be reachable from the start…
     const seen = new Set([flow.start]), queue = [flow.start];
     while (queue.length) for (const [, target] of edges(queue.shift())) if (!seen.has(target)) { seen.add(target); queue.push(target); }
@@ -97,7 +99,7 @@ export function validateFlow(raw, { blocks, roles = {} }) {
 
 // The steps in reading order: from the start, following the first-listed outputs.
 export function stepOrder(flow) {
-  const order = [], seen = new Set(), walk = id => { if (!flow.steps[id] || seen.has(id)) return; seen.add(id); order.push(id); for (const target of Object.values(flow.steps[id].next)) walk(target); };
+  const order = [], seen = new Set(), walk = id => { if (!flow.steps[id] || seen.has(id)) return; seen.add(id); order.push(id); for (const target of [...Object.values(flow.steps[id].with).filter(value => typeof value === 'string' && flow.steps[value] && value !== id), ...Object.values(flow.steps[id].next)]) walk(target); };
   walk(flow.start);
   for (const id of Object.keys(flow.steps)) walk(id);
   return order;

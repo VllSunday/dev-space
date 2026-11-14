@@ -14,6 +14,8 @@ const serialize = (flow: Flow) => JSON.stringify({
   flow: 1, id: flow.id, name: flow.name, ...(flow.description ? { description: flow.description } : {}), roles: flow.roles, ...(Object.keys(flow.needs).length ? { needs: flow.needs } : {}), limits: flow.limits, start: flow.start,
   steps: Object.fromEntries(Object.entries(flow.steps).map(([id, step]) => [id, { ...(step.title ? { title: step.title } : {}), block: step.block, ...(Object.keys(step.with).length ? { with: step.with } : {}), next: step.next, ...(Object.keys(step.limit).length ? { limit: step.limit } : {}) }])),
 }, null, 2)
+// The place is rebuilt when you switch away and back; it reopens where you left it.
+let lastFlow = ''
 const plural = (count: number, one: string, few: string, many: string) => `${count} ${count % 10 === 1 && count % 100 !== 11 ? one : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? few : many}`
 
 function ParamField({ name, param, value, flow, block, change, roleTitles }: { name: string; param: BlockParam; value: unknown; flow: Flow; block: BlockInfo; change: (value: unknown) => void; roleTitles: Record<string, string> }) {
@@ -26,27 +28,29 @@ function ParamField({ name, param, value, flow, block, change, roleTitles }: { n
   </label>
 }
 
-function StepCard({ id, step, flow, blocks, problems, change, remove, roleTitles }: { id: string; step: FlowStep; flow: Flow; blocks: BlockInfo[]; problems: FlowProblem[]; change: (step: FlowStep) => void; remove?: () => void; roleTitles: Record<string, string> }) {
+function StepCard({ id, step, flow, blocks, problems, change, remove, roleTitles, order }: { id: string; step: FlowStep; flow: Flow; blocks: BlockInfo[]; problems: FlowProblem[]; change: (step: FlowStep) => void; remove?: () => void; roleTitles: Record<string, string>; order: string[] }) {
+  const [more, setMore] = useState(false)
   const block = blocks.find(item => item.id === step.block)
   const targets = [...Object.entries(flow.steps).map(([other, item]) => [other, item.title || blocks.find(entry => entry.id === item.block)?.title || other]), ...Object.entries(terminalNames)]
   if (!block) return <article className="fl-step missing"><header><b>{step.title || id}</b><small>блок «{step.block}» не найден</small></header></article>
   return <article className={'fl-step' + (problems.length ? ' bad' : '')} data-step={id}>
-    <header><span className="fl-step-icon"><Icon name={blockIcon[block.base || block.id] || 'mcp'} size={15} /></span><b>{step.title || block.title}</b><small>{block.summary}</small>{block.plugin && <em>{block.plugin}</em>}<span className="fl-fill" />{flow.start === id && <em>начало</em>}{remove && <button type="button" className="ds-icon" aria-label={'Удалить шаг ' + (step.title || block.title)} title="Удалить шаг" onClick={remove}><Icon name="trash" size={13} /></button>}</header>
-    {Object.entries(block.params).map(([name, param]) => (step.with[name] !== undefined || param.required || param.type !== 'text' || name === 'task' || name === 'question') && <ParamField key={name} roleTitles={roleTitles} name={name} param={param} value={step.with[name]} flow={flow} block={block} change={value => { const next = { ...step.with }; if (value === undefined) delete next[name]; else next[name] = value; change({ ...step, with: next }) }} />)}
+    <header><span className="fl-step-icon"><Icon name={blockIcon[block.base || block.id] || 'mcp'} size={15} /></span><b>{step.title || block.title}</b><small>{block.summary}</small>{block.plugin && <em>{block.plugin}</em>}<span className="fl-fill" />{flow.start === id && <em>начало</em>}{Object.entries(block.params).some(([name, param]) => step.with[name] === undefined && !param.required) && <button type="button" className="fl-more" aria-expanded={more} onClick={() => setMore(value => !value)}>{more ? 'скрыть пустые' : 'ещё параметры'}</button>}{remove && <button type="button" className="ds-icon" aria-label={'Удалить шаг ' + (step.title || block.title)} title="Удалить шаг" onClick={remove}><Icon name="trash" size={13} /></button>}</header>
+    {Object.entries(block.params).map(([name, param]) => (step.with[name] !== undefined || param.required || more) && <ParamField key={name} roleTitles={roleTitles} name={name} param={param} value={step.with[name]} flow={flow} block={block} change={value => { const next = { ...step.with }; if (value === undefined) delete next[name]; else next[name] = value; change({ ...step, with: next }) }} />)}
     {block.outputs.map(output => <div className="fl-row fl-out" key={output.id}><span>{output.title}</span>
       <select value={step.next[output.id] || ''} onChange={event => change({ ...step, next: { ...step.next, [output.id]: event.target.value } })} aria-label={'Куда ведёт выход ' + output.title}>{!step.next[output.id] && <option value="">— выберите —</option>}{targets.map(([target, title]) => <option key={target} value={target}>{target.startsWith('@') ? '◦ ' : '→ '}{title}</option>)}</select>
-      {flow.steps[step.next[output.id]] && <label className="fl-limit" title="Сколько раз можно пройти этим переходом. Нужен, если переход возвращает назад.">не больше<input type="number" min={0} max={50} placeholder="—" value={step.limit[output.id] ?? ''} onChange={event => { const next = { ...step.limit }; if (event.target.value === '') delete next[output.id]; else next[output.id] = Number(event.target.value); change({ ...step, limit: next }) }} aria-label={'Предел возвратов для выхода ' + output.title} />раз</label>}
+      {flow.steps[step.next[output.id]] && (step.limit[output.id] !== undefined || order.indexOf(step.next[output.id]) <= order.indexOf(id)) && <label className="fl-limit" title="Сколько раз можно пройти этим переходом. Нужен, если переход возвращает назад.">не больше<input type="number" min={0} max={50} placeholder="—" value={step.limit[output.id] ?? ''} onChange={event => { const next = { ...step.limit }; if (event.target.value === '') delete next[output.id]; else next[output.id] = Number(event.target.value); change({ ...step, limit: next }) }} aria-label={'Предел возвратов для выхода ' + output.title} />раз</label>}
     </div>)}
     {problems.map((problem, index) => <p className="fl-problem" key={index} role="alert">{problem.text}</p>)}
   </article>
 }
 
 export default function FlowsPlace({ flows, plugins, focus, launch, notify }: { flows: FlowsState & { reload: () => Promise<unknown> }; plugins: PluginsState; focus: string; launch: (flowId: string, input?: LaunchRequest['input']) => void; notify: (text: string) => void }) {
-  const [selectedId, setSelectedId] = useState(focus || ''), [mode, setMode] = useState<'blocks' | 'text'>('blocks'), [pane, setPane] = useState<'flow' | 'reference'>('flow')
+  const [selectedId, setSelectedId] = useState(focus || lastFlow), [mode, setMode] = useState<'blocks' | 'text'>('blocks'), [pane, setPane] = useState<'flow' | 'reference'>('flow')
   const entry: FlowEntry | undefined = flows.flows.find(item => item.id === selectedId) || flows.flows[0]
   const [text, setText] = useState(''), [checked, setChecked] = useState<{ ok: boolean; problems: FlowProblem[]; flow: Flow | null; order: string[] } | null>(null)
   const [words, setWords] = useState(''), [adding, setAdding] = useState(''), [busy, setBusy] = useState(false), [naming, setNaming] = useState<string | null>(null)
   useEffect(() => { if (focus) { setSelectedId(focus); setPane('flow') } }, [focus])
+  useEffect(() => { if (selectedId) lastFlow = selectedId }, [selectedId])
   useEffect(() => { setText(entry?.text || ''); setChecked(null) }, [entry?.id, entry?.text])
   const dirty = !!entry && text !== entry.text
   // Every edit is checked by the service: the same code that guards a launch.
@@ -99,7 +103,7 @@ export default function FlowsPlace({ flows, plugins, focus, launch, notify }: { 
         <div className="fl-body">
           {mode === 'text' ? <textarea className="fl-text" value={text} onChange={event => setText(event.target.value)} spellCheck={false} aria-label="Текст флоу" />
             : <div className="fl-chain">
-              {(current?.order.length ? current.order : Object.keys(flow.steps)).map(id => flow.steps[id] && <StepCard key={id} roleTitles={Object.fromEntries(plugins.roles.map(role => [role.id, role.title]))} id={id} step={flow.steps[id]} flow={flow} blocks={flows.blocks} problems={stepProblems(id)} change={step => edit(draft => { draft.steps[id] = step })} remove={flow.start === id ? undefined : () => edit(draft => { delete draft.steps[id] })} />)}
+              {(current?.order.length ? current.order : Object.keys(flow.steps)).map(id => flow.steps[id] && <StepCard key={id} order={current?.order.length ? current.order : Object.keys(flow.steps)} roleTitles={Object.fromEntries(plugins.roles.map(role => [role.id, role.title]))} id={id} step={flow.steps[id]} flow={flow} blocks={flows.blocks} problems={stepProblems(id)} change={step => edit(draft => { draft.steps[id] = step })} remove={flow.start === id ? undefined : () => edit(draft => { delete draft.steps[id] })} />)}
               <div className="fl-add"><select value={adding} onChange={event => { if (event.target.value) addStep(event.target.value); setAdding('') }} aria-label="Добавить шаг"><option value="">＋ Добавить шаг…</option>{flows.blocks.map(block => <option key={block.id} value={block.id}>{block.title} — {block.summary}{block.plugin ? ' · ' + block.plugin : ''}</option>)}</select></div>
             </div>}
         </div>
