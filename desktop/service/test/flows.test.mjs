@@ -4,6 +4,7 @@ import { mkdtemp, readFile, readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
 
 // Flows are checked with a scripted agent in a real terminal: it receives the
 // assignment line, reads the task with `devspace step task` and hands the step
@@ -237,6 +238,24 @@ test('the long-chat hand-off is a flow: note, check by code, a new chat in the s
     assert.equal(next.name, 'Dream Game Combat · continued'); assert.equal(next.cwd, old.cwd); assert.equal(next.agent, 'stub');
     assert.equal(settings.agentSessionSpaces[next.id], settings.agentSessionSpaces[old.id], 'the new chat stays in the source space');
     assert.deepEqual(service.flows.list()[0].path.map(entry => entry.output), ['taken', 'done', 'ok']);
+  } finally { await service.close(); }
+});
+
+test('the devspace command still works where the agent\'s sandbox has no network', async () => {
+  const { service, project } = await start();
+  try {
+    const session = await service.sessions.create({ agent: 'stub', name: 'Sandboxed', cwd: project.path });
+    const env = { ...process.env, ...service.agentApi.environment(session, 'http://127.0.0.1:9') }, cli = fileURLToPath(new URL('../cli/devspace.mjs', import.meta.url));
+    const run = (args, extra = {}) => new Promise(resolve => execFile(process.execPath, [cli, ...args], { env: { ...env, ...extra } }, (error, stdout, stderr) => resolve({ code: error?.code || 0, stdout, stderr })));
+    // The service address is unreachable, so the request travels as a file.
+    const help = await run(['help']);
+    assert.equal(help.code, 0); assert.match(help.stdout, /СПРАВОЧНИК DEV SPACE[\s\S]*devspace step done/);
+    const refused = await run(['step', 'done', '--output', 'done']);
+    assert.equal(refused.code, 1); assert.match(refused.stderr, /нет шага флоу/);
+    // The same token check applies to requests left as files.
+    const stranger = await run(['agents', 'list'], { DEVSPACE_TOKEN: 'not-a-token' });
+    assert.equal(stranger.code, 1); assert.match(stranger.stderr, /не узнал/);
+    assert.deepEqual(await readdir(service.agentApi.spool), [], 'requests and answers are removed once read');
   } finally { await service.close(); }
 });
 

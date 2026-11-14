@@ -274,7 +274,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       if (pluginView) {
         if (!equalSecret(pluginView[1], files.repoGrant)) throw Object.assign(new Error('Not allowed'), { status: 403 });
         const { html, hosts } = await plugins.viewCode(pluginView[2], pluginView[3]);
-        const page = `<!doctype html><meta charset="utf-8"><script>addEventListener('message',e=>{if(e.data&&e.data.type==='devspace:data'&&e.data.theme)for(const k in e.data.theme)document.documentElement.style.setProperty(k,e.data.theme[k])})</script>${html}`;
+        const page = `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="dark"><style>html{color-scheme:dark;background:transparent}</style><script>addEventListener('message',e=>{if(e.data&&e.data.type==='devspace:data'&&e.data.theme)for(const k in e.data.theme)document.documentElement.style.setProperty(k,e.data.theme[k])})</script>${html}`;
         response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': `sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src ${hosts.length ? hosts.map(host => 'https://' + host).join(' ') : "'none'"}; form-action 'none'; base-uri 'none'` });
         response.end(request.method === 'HEAD' ? undefined : page); return;
       }

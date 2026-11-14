@@ -1,5 +1,76 @@
 # Verification record
 
+## Board, plugins and flows (branch feat/board-plugins-flows)
+
+Checked on a headless Linux server (Node 24.22, Chromium through Playwright). No
+native Tauri window, microphone or speech recognition was available; nothing
+here verifies them. A successful build is not evidence that the native app works.
+
+**Build and unit tests.** `npm run build` passed. `npm test` ran 301 tests: 292
+passed, 9 skipped (the same optional Whisper and child-process fixtures as before),
+none failed. New suites: `boards.test.mjs` (migration of a store saved before
+boards without losing data, the kept copy, undo, zone operations, presets),
+`plugins.test.mjs` (built-in views through the same manifest, computed rights,
+refused manifests, install from a folder and from a Git link with the commit
+recorded, the Linear connection) and `flows.test.mjs`.
+
+**Flows with a scripted agent.** `flows.test.mjs`, `checks/board-ui.mjs` and
+`checks/flows-ui.mjs` run flows end to end in real PTY terminals with
+`checks/stub-agent.mjs`: a script that receives the assignment line, reads the
+task with `devspace step task` and hands the step in with `devspace step done`.
+Covered: an output the block does not have is refused; a hand-in without the
+result is refused by code; a proposal is applied only after the person decides;
+the return limit stops a reviewer who never accepts and the run waits for a
+person; a closed terminal stops the run; several things get their own runs; a
+plugin-declared block is usable at once; text from the tracker reaches the agent
+inside the data block; the `devspace` command works through files when the
+service address is unreachable. The stub proves the mechanism, not that a model
+follows it.
+
+**Flows with real CLI agents.** `node checks/flows-real-agent.mjs claude --bypass`
+passed twice on this server with Claude Code 2.1.311: the flow «Материалы →
+страница» (the agent wrote a 14-block page proposal, code accepted it, the page
+was applied) and «Плагин словами» (the agent built a view from ready parts with
+sample data; the manifest passed and the plugin was installed). The same check
+passed once with Codex CLI 0.163 for «Материалы → страница». All three runs
+used the CLI's own skip-permissions mode so that nobody had to answer prompts.
+Not checked: a real agent in its default permission mode, where Claude Code asks
+before each `devspace` call unless the launch option is ticked; Codex inside its
+no-network sandbox with the file channel (that channel is covered only by the
+unit test); OpenCode, Kimi and Antigravity; a flow with two real agents; any run
+on Windows or macOS.
+
+**Browser checks.** With `MRMAK_TEST_BROWSER=chromium`: `board-ui` (first run,
+example board, three levels, move, resize, collapse, hide, search, add a zone and
+a note, a plugin that changes the board, a sandboxed code view, hand-off to an
+agent, data intact) and `flows-ui` (library, editing as blocks and text with the
+launch check, launch into a new space, step strip, proposal and decision, return
+limit, plugin by words with preview, Linear on the board) passed. The sandbox
+check runs inside the plugin frame: it could not reach the app API, an outside
+address, the parent document or browser storage, and its origin was opaque.
+`layout-ui`, `workbench-ui`, `viewer-ui`, `wiki-navigation-ui`, `template-ui`,
+`material-edit-ui` and `agent-panels-ui` pass; five of them were changed to reach
+the same editors through the board instead of the removed sidebar, keeping their
+assertions about the editors. Screenshots in `docs/redesign/screens` come from
+these runs in Chromium at 1500×950, not from an installed app.
+
+**Linear.** The connection was written from Linear's public GraphQL documentation
+and checked only against example answers in `checks/fixtures/linear`, which
+repeat the documented shapes. It was never run against a live Linear account:
+there is no key on this server. Field names, state types and error shapes may
+differ in practice.
+
+**Not regressions.** The `desktop:test:ui` scripts (`ui`, `language-ui`,
+`links-ui`, `history-ui`, `groups-ui`, `conversation-ui`, `theme-ui`, `voice-ui`,
+`desktop-dictation-ui`, `mobile-ui`, `workspace-edit-ui`, `cards-ui`) fail on
+this server with Chromium both on this branch and on an untouched checkout of
+`main`; `scroll-ui` passes on both. They were not investigated further.
+
+**Not verified.** The native window and installers; the board in the mobile view;
+the interface in English; WebView2 and WKWebView behaviour of the sandboxed
+frame; large projects (the board was exercised with tens of things, not
+thousands); two people or two app windows editing one board at once.
+
 ## Version 1.0.7 — release preflight after local spaces
 
 The local Windows build passed. Native/service tests completed with 275 passes,
