@@ -188,3 +188,14 @@
 .dev-space .pv-row[draggable=true],.dev-space .pv-item[draggable=true]{cursor:grab}
 .dev-space .bd-canvas.short{min-height:0}
 .dev-space .bd-welcome{margin-top:8px}
+
+/* Pinned project navigation next to the board */
+.dev-space .bd-work{flex:1;min-height:0;min-width:0;display:flex;position:relative;container-type:inline-size}
+.dev-space .bd-nav{flex:none;width:196px;overflow:auto;border-right:1px solid var(--ds-border);padding:8px 8px 12px;background:var(--ds-canvas)}
+.dev-space .bd-nav>header{display:flex;align-items:center;justify-content:space-between;padding:0 2px 6px 6px;color:var(--ds-faint);font-size:11px;font-weight:500}
+.dev-space .bd-nav .pv-outline button{width:100%;text-align:left}
+.dev-space .bd-nav .pv-outline button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dev-space .bd-nav-open{position:absolute;left:8px;top:8px;z-index:6;display:grid;place-items:center;width:28px;height:28px;border-radius:6px;border:1px solid var(--ds-border);background:var(--ds-canvas);color:var(--ds-muted)}
+.dev-space .bd-nav-open:hover{color:var(--ds-text)}
+/* A narrow board keeps its whole width for zones. */
+@container (max-width:760px){.dev-space .bd-nav{display:none}}

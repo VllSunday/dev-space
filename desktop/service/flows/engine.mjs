@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { EventEmitter } from 'node:events';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { readJson, saveJson } from '../util.mjs';
 import { plainText } from '../things.mjs';
 import { roles as connectionRoles } from '../plugins/roles.mjs';
@@ -25,7 +25,7 @@ export class Flows extends EventEmitter {
     this.builtinDir = path.join(here, 'library'); this.blocksDir = path.join(here, 'blocks');
     this.userDir = path.join(repo, 'workspace', 'devspace', 'flows');
     this.draftsDir = path.join(repo, 'workspace', 'devspace', 'proposals', 'flows');
-    this.runsDir = path.join(stateDir, 'flow-runs');
+    this.runsDir = path.join(stateDir, 'flow-runs'); this.decisionsFile = path.join(stateDir, 'flow-decisions.jsonl'); this.log = Promise.resolve();
     this.paths = { proposals: path.join(repo, 'workspace', 'devspace', 'proposals'), pluginDrafts: path.join(repo, 'workspace', 'devspace', 'proposals', 'plugins'), flowDrafts: this.draftsDir, handoffs: path.join(repo, 'inbox', 'handoffs') };
     this.baseBlocks = new Map(); this.runs = new Map(); this.queues = new Map();
   }
@@ -119,12 +119,29 @@ export class Flows extends EventEmitter {
   async acceptDraft(id) { await this.checkDraft(id); const file = path.join(this.draftsDir, id + '.flow.json'); await this.save(id, await readFile(file, 'utf8')); await rm(file, { force: true }); return this.get(id); }
   async discardDraft(id) { if (!idPattern.test(String(id))) throw fail('Черновик не найден.', 404); await rm(path.join(this.draftsDir, id + '.flow.json'), { force: true }); this.emit('library'); return { removed: id }; }
 
+  // ── Decision records ────────────────────────────────────────────────────
+  // Every choice that moves a run is appended as one line and never rewritten:
+  // the situation, the options code allowed, the choice, who made it, and the
+  // policy (the flow file or an engine rule) with its version. How the run
+  // ended is appended later as a record of its own. Records outlive the run.
+  record(run, kind, { step = run.current, situation = '', options = [], choice, by = 'code', note = '', policy = null }) {
+    const entry = { id: 'dec-' + randomUUID().slice(0, 12), at: new Date().toISOString(), runId: run.id, parentId: run.parentId || undefined, projectId: run.projectId, kind, step: step || null, situation: plainText(situation, 600), options, choice, by, note: plainText(note, 600) || undefined, policy: policy || { name: 'flow:' + run.flowId, version: run.flowVersion } };
+    this.log = this.log.then(() => appendFile(this.decisionsFile, JSON.stringify(entry) + '\n')).catch(() => {});
+    this.emit('decision', entry);
+  }
+  async decisions(runId) {
+    await this.log;
+    const text = await readFile(this.decisionsFile, 'utf8').catch(() => '');
+    const entries = text.split('\n').filter(Boolean).map(line => { try { return JSON.parse(line); } catch { return null; } }).filter(Boolean);
+    return runId ? entries.filter(entry => entry.runId === runId) : entries.slice(-500);
+  }
+
   // ── Launch ──────────────────────────────────────────────────────────────
   async launch({ flowId, projectId, roles = {}, needs = {}, space = {}, input = {}, parent = null, start = null, item = null }) {
     const entry = parent ? null : await this.get(flowId);
     if (entry && !entry.ok) throw fail('Флоу не запускается, пока в нём есть проблемы: ' + entry.problems.map(problem => problem.text).join('; ') + '.', 409);
     const flow = parent ? parent.flow : entry.flow, project = await this.host.project(projectId);
-    const run = { id: 'run-' + randomUUID().slice(0, 12), flowId: flow.id, name: flow.name, flow, projectId: project.id, cwd: project.path, spaceId: null, status: 'running', reason: null, pending: null, current: start || flow.start, path: [], counters: { handoffs: 0, edges: {} }, roles: {}, needs: {}, input, item, results: {}, state: {}, waiting: null, person: null, parentId: parent?.id || null, children: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const run = { id: 'run-' + randomUUID().slice(0, 12), flowId: flow.id, name: flow.name, flow, projectId: project.id, cwd: project.path, spaceId: null, flowVersion: parent?.flowVersion || createHash('sha256').update(JSON.stringify(flow)).digest('hex').slice(0, 12), status: 'running', reason: null, pending: null, current: start || flow.start, path: [], counters: { handoffs: 0, edges: {} }, roles: {}, needs: {}, input, item, results: {}, state: {}, waiting: null, person: null, parentId: parent?.id || null, children: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     for (const [id, need] of Object.entries(flow.needs)) {
       const connection = this.operations.list().find(item => item.id === needs[id]);
       if (!connection || connection.role !== need.role) throw fail(`Выберите, кто играет роль «${connectionRoles[need.role].title}».`);
@@ -138,7 +155,12 @@ export class Flows extends EventEmitter {
       else throw fail(`Выберите агента для роли «${role.title}».`);
     }
     run.spaceId = space.id || (space.name ? await this.host.createSpace(space.name, project.path) : parent?.spaceId || this.host.currentSpace());
-    this.runs.set(run.id, run); await this.persist(run);
+    this.runs.set(run.id, run);
+    if (!parent) {
+      for (const [id, need] of Object.entries(flow.needs)) this.record(run, 'connection', { step: null, situation: `Кто играет роль «${connectionRoles[need.role].title}»`, options: this.operations.list().filter(item => item.role === need.role && item.ready).map(item => item.id), choice: run.needs[id], by: 'person' });
+      for (const [id, role] of Object.entries(flow.roles)) this.record(run, 'agent', { step: null, situation: `Кто работает в роли «${role.title}»`, options: this.host.agentChoices?.() || [], choice: run.roles[id].sessionId ? 'session:' + run.roles[id].agent : 'new:' + run.roles[id].agent, by: 'person' });
+    }
+    await this.persist(run);
     this.enqueue(run.id, () => this.advance(run));
     return this.view(run);
   }
@@ -175,17 +197,18 @@ export class Flows extends EventEmitter {
       try { outcome = await block.enter(this.context(run)); }
       catch (error) { this.needPerson(run, `Шаг «${this.title(run, run.current)}» не выполнился: ${error.message}`, { retry: true }); break; }
       if (!outcome?.output) break;
-      this.transition(run, block, outcome);
+      this.transition(run, block, outcome, 'code');
     }
     await this.persist(run);
     if (ended(run) && run.parentId) this.childEnded(run);
   }
   // The only place where a run moves to another step.
-  transition(run, block, outcome) {
-    const stepId = run.current, step = run.flow.steps[stepId];
+  transition(run, block, outcome, by, note = '') {
+    const stepId = run.current, step = run.flow.steps[stepId], options = run.waiting?.outputs || block.outputs.map(output => output.id);
     if (!block.outputs.some(output => output.id === outcome.output)) { this.needPerson(run, `Блок «${block.title}» вернул выход «${outcome.output}», которого у него нет.`); return; }
     run.results[stepId] = { output: outcome.output, summary: plainText(outcome.summary || '', 4000), data: outcome.data || null };
     run.path.push({ step: stepId, output: outcome.output, summary: run.results[stepId].summary, at: new Date().toISOString() });
+    this.record(run, 'step', { step: stepId, situation: `Шаг «${this.title(run, stepId)}» → ${step.next[outcome.output]}`, options, choice: outcome.output, by, note: note || run.results[stepId].summary });
     run.waiting = null; run.person = null; delete run.state[stepId];
     const target = step.next[outcome.output], outputTitle = block.outputs.find(output => output.id === outcome.output).title;
     if (target === '@done') { run.status = 'done'; run.current = null; return; }
@@ -200,7 +223,12 @@ export class Flows extends EventEmitter {
     }
     run.current = target;
   }
-  needPerson(run, reason, pending = {}) { run.status = 'needs-person'; run.reason = plainText(reason, 600); run.pending = pending; run.waiting = null; }
+  // Code never guesses past a limit or an error: its only admissible move is to
+  // stop and call a person. That is a decision too, made by an engine rule.
+  needPerson(run, reason, pending = {}) {
+    run.status = 'needs-person'; run.reason = plainText(reason, 600); run.pending = pending; run.waiting = null;
+    this.record(run, 'call-person', { situation: reason, options: ['call-person'], choice: 'call-person', policy: { name: 'engine:stop-and-ask', version: 1 } });
+  }
 
   // Gives an agent its assignment for the current step. The terminal receives
   // one short line; the full text, with data kept apart from instructions, is
@@ -255,7 +283,7 @@ export class Flows extends EventEmitter {
         if (run.waiting.rejects >= 5) { this.needPerson(run, `Агент пять раз сдал шаг «${this.title(run, stepId)}» с ошибкой: ${outcome?.reject || 'результат не принят'}`, { retry: true }); await this.persist(run); }
         throw fail('Шаг не принят. ' + (outcome?.reject || 'Проверь результат и сдай ещё раз.'), 422);
       }
-      this.transition(run, block, outcome);
+      this.transition(run, block, outcome, 'agent:' + (run.roles[run.waiting.role]?.agent || run.waiting.role));
       const next = run.status === 'done' ? 'флоу завершён' : run.status === 'running' ? `дальше шаг «${this.title(run, run.current)}»` : 'флоу ждёт человека';
       await this.persist(run);
       this.enqueue(run.id, () => this.advance(run));
@@ -272,7 +300,7 @@ export class Flows extends EventEmitter {
       const outcome = await block.signal(this.context(run), { type: 'decision', output, note: plainText(note, 4000).trim() });
       if (!outcome?.output) throw fail(outcome?.reject || 'Решение не принято.', 409);
       run.status = 'running';
-      this.transition(run, block, outcome);
+      this.transition(run, block, outcome, 'person', plainText(note, 600).trim());
       await this.advance(run);
       return this.view(run);
     });
@@ -282,6 +310,8 @@ export class Flows extends EventEmitter {
     const run = this.runs.get(runId);
     if (!run) throw fail('Запуск не найден.', 404);
     return this.enqueue(run.id, async () => {
+      const allowed = [...(run.status === 'needs-person' ? ['continue'] : []), ...(ended(run) ? [] : ['stop'])];
+      if (allowed.includes(action)) this.record(run, 'resolve', { situation: run.reason || 'Человек остановил запуск.', options: allowed, choice: action, by: 'person', policy: { name: 'engine:stop-and-ask', version: 1 } });
       if (action === 'stop') { if (!ended(run)) { run.status = 'stopped'; run.reason = 'Остановлен человеком.'; run.waiting = null; run.person = null; } }
       else if (action === 'continue' && run.status === 'needs-person') {
         if (run.pending?.target) { run.current = run.pending.target; run.counters.handoffs = Math.min(run.counters.handoffs, run.flow.limits.handoffs - 1); for (const edge of Object.keys(run.counters.edges)) { const [step, output] = edge.split('>'); const limit = run.flow.steps[step]?.limit[output]; if (limit !== undefined) run.counters.edges[edge] = Math.min(run.counters.edges[edge], limit); } }
@@ -336,7 +366,7 @@ export class Flows extends EventEmitter {
       const block = this.blocks().get(parent.flow.steps[parent.current].block);
       const outcome = await block.signal(this.context(parent), { type: 'children', children: children.map(item => ({ id: item.id, status: item.status })) });
       parent.fanout = false;
-      if (outcome?.output) { this.transition(parent, block, outcome); await this.advance(parent); }
+      if (outcome?.output) { this.transition(parent, block, outcome, 'code'); await this.advance(parent); }
     });
   }
   // Things that running flows are already working on.
@@ -345,6 +375,8 @@ export class Flows extends EventEmitter {
   // ── State for the interface ─────────────────────────────────────────────
   async persist(run) {
     run.updatedAt = new Date().toISOString();
+    // The factual outcome of the run, appended once.
+    if (ended(run) && !run.closed) { run.closed = true; this.record(run, 'outcome', { step: null, situation: run.reason || '', options: ['done', 'stopped'], choice: run.status, policy: { name: 'engine:outcome', version: 1 } }); }
     await saveJson(path.join(this.runsDir, run.id + '.json'), run);
     this.emit('run', this.view(run));
     const old = [...this.runs.values()].filter(ended).sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));

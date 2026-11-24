@@ -168,6 +168,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     project: async id => { const project = (await devspace.read()).projects.find(item => item.id === id); if (!project) throw Object.assign(new Error('Проект не найден.'), { status: 404 }); return project; },
     session: id => sessions.items.get(id) || null,
     agentAvailable: agent => inventory().some(item => item.id === agent && item.available && item.id !== 'shell'),
+    agentChoices: () => inventory().filter(item => item.available && item.id !== 'shell').map(item => item.id),
     currentSpace: () => settings.selectedAgentSpaceId,
     createSpace: async (name, cwd) => { await changeAgentSpaces(settings, { action: 'create', name, cwd }, sessions.list()); const space = settings.agentSpaces.at(-1); settings.selectedAgentSpaceId = space.id; await saveSettings(); broadcast('settings', { settings }); return space.id; },
     openAgent, send: sendLine,
@@ -380,6 +381,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'DELETE' && url.pathname === '/api/flows') return json(response, 200, await flows.remove(data.id));
         if (method === 'POST' && url.pathname === '/api/flows/drafts') return json(response, 200, data.action === 'accept' ? await flows.acceptDraft(data.id) : await flows.discardDraft(data.id));
         if (method === 'POST' && url.pathname === '/api/flows/launch') return json(response, 201, await flows.launch({ flowId: data.flowId, projectId: data.projectId, roles: data.roles, needs: data.needs, space: data.space || {}, input: data.input || {} }));
+        if (method === 'GET' && url.pathname === '/api/flows/decisions') return json(response, 200, { decisions: await flows.decisions(url.searchParams.get('run') || '') });
         if (method === 'POST' && url.pathname === '/api/flows/decide') return json(response, 200, await flows.decide(data.runId, data.output, data.note));
         if (method === 'POST' && url.pathname === '/api/flows/resolve') return json(response, 200, await flows.resolve(data.runId, data.action));
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));

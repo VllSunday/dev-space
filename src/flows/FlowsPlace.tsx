@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../desktop/client'
 import { Icon } from '../desktop/Icons'
 import type { PluginsState } from '../plugins/types'
-import type { BlockInfo, BlockParam, Flow, FlowEntry, FlowProblem, FlowRun, FlowsState, FlowStep } from './types'
+import type { BlockInfo, BlockParam, Flow, FlowDecision, FlowEntry, FlowProblem, FlowRun, FlowsState, FlowStep } from './types'
 import { runStatus, terminalNames } from './types'
 import type { LaunchRequest } from './LaunchDialog'
 import './flows.css'
@@ -47,6 +47,11 @@ function StepCard({ id, step, flow, blocks, problems, change, remove, roleTitles
 // One run: what has happened step by step, and the ways a person can step in.
 function RunDetail({ run, flows, focusAgent, notify }: { run: FlowRun; flows: FlowsState; focusAgent: (sessionId: string) => void; notify: (text: string) => void }) {
   const [busy, setBusy] = useState(false)
+  // The immutable log of choices: who chose, among what, and under which policy.
+  const [records, setRecords] = useState<FlowDecision[]>([])
+  useEffect(() => { let live = true; void api<{ decisions: FlowDecision[] }>('/flows/decisions?run=' + encodeURIComponent(run.id)).then(value => { if (live) setRecords(value.decisions) }).catch(() => {}); return () => { live = false } }, [run.id, run.updatedAt])
+  const who = (by: string) => by === 'person' ? 'человек' : by === 'code' ? 'код' : 'агент ' + by.slice(6)
+  const what: Record<FlowDecision['kind'], string> = { connection: 'подключение на роль', agent: 'агент на роль', step: 'выход шага', 'call-person': 'остановка', resolve: 'после остановки', outcome: 'итог запуска' }
   const act = (path: string, body: Record<string, unknown>) => { setBusy(true); void api(path, { runId: run.id, ...body }).catch(error => notify((error as Error).message)).finally(() => setBusy(false)) }
   const outputTitle = (stepId: string, output: string) => flows.blocks.find(block => block.id === run.steps.find(step => step.id === stepId)?.block)?.outputs.find(item => item.id === output)?.title || output
   const live = !['done', 'stopped'].includes(run.status)
@@ -60,7 +65,13 @@ function RunDetail({ run, flows, focusAgent, notify }: { run: FlowRun; flows: Fl
     {run.status === 'waiting-person' && <p className="fl-lead">Флоу ждёт вашего решения: предложение лежит на доске проекта.</p>}
     <div className="fl-body"><ol className="fl-path">{run.path.map((entry, index) => <li key={index}><i><Icon name="check" size={10} /></i><div><b>{entry.title}</b><em>{outputTitle(entry.step, entry.output)}</em><time>{new Date(entry.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</time>{entry.summary && <p>{entry.summary}</p>}</div></li>)}
       {live && run.current && <li className="now"><i /><div><b>{run.steps.find(step => step.id === run.current)?.title}</b><em>{run.status === 'running' ? 'идёт сейчас' : runStatus[run.status]}</em></div></li>}
-    </ol></div>
+    </ol>
+      {records.length > 0 && <details className="fl-records"><summary>Записи решений · {records.length}</summary>
+        <p>Каждый выбор записан один раз и не правится: что было, из чего выбирали, кто выбрал и по какому правилу.</p>
+        <table><thead><tr><th>Время</th><th>Что решалось</th><th>Выбор</th><th>Из чего</th><th>Кто</th><th>Правило</th></tr></thead>
+          <tbody>{records.map(entry => <tr key={entry.id}><td>{new Date(entry.at).toLocaleTimeString('ru-RU')}</td><td><b>{what[entry.kind]}</b>{entry.situation && <span>{entry.situation}</span>}</td><td><code>{entry.choice}</code></td><td>{entry.options.join(', ') || '—'}</td><td>{who(entry.by)}</td><td><code>{entry.policy.name}@{entry.policy.version}</code></td></tr>)}</tbody></table>
+      </details>}
+    </div>
   </section>
 }
 

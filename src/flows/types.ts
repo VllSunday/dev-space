@@ -18,6 +18,7 @@ export interface FlowRun {
   counters: { handoffs: number; edges: Record<string, number> }; limits: { handoffs?: number }
   parentId: string | null; children: string[]; createdAt: string; updatedAt: string
 }
+export interface FlowDecision { id: string; at: string; runId: string; kind: 'connection' | 'agent' | 'step' | 'call-person' | 'resolve' | 'outcome'; step: string | null; situation: string; options: string[]; choice: string; by: string; note?: string; policy: { name: string; version: string | number } }
 export interface FlowsState { flows: FlowEntry[]; drafts: FlowEntry[]; blocks: BlockInfo[]; runs: FlowRun[]; reference: string; commands: { name: string; title: string }[] }
 export const terminalNames: Record<string, string> = { '@done': 'Готово', '@stopped': 'Остановить', '@person': 'Позвать меня' }
 export const runStatus: Record<FlowRun['status'], string> = { running: 'идёт', 'waiting-person': 'ждёт вас', 'needs-person': 'нужны вы', done: 'готово', stopped: 'остановлен' }

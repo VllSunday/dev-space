@@ -81,7 +81,7 @@ function Table({ part, things, handlers }: { part: Extract<Part, { part: 'table'
 function Counter({ part, things }: { part: Extract<Part, { part: 'counter' }>; things: Thing[] }) {
   return <div className="pv-counter">{part.counters.map(counter => <div key={counter.title}><b>{counter.where ? things.filter(thing => fieldValue(thing, counter.where!.field) === counter.where!.equals).length : things.length}</b><span>{counter.title}</span></div>)}</div>
 }
-function OutlineView({ outline, handlers }: { outline?: Outline; handlers: ViewHandlers }) {
+export function OutlineView({ outline, handlers }: { outline?: Outline; handlers: ViewHandlers }) {
   if (!outline) return null
   return <div className="pv-outline">{outline.boards.map(board => <section key={board.id}><h4>{board.name}</h4>{board.zones.map(zone => <button type="button" key={zone.id} className={zone.hidden ? 'hidden' : ''} onClick={() => handlers.openZone?.(board.id, zone.id)}><i style={{ background: zone.color || 'var(--ds-faint)' }} />{zone.icon && <TopicIcon value={zone.icon} size={13} />}<span>{zone.name}</span><small>{zone.count || ''}</small></button>)}</section>)}
     <button type="button" onClick={() => handlers.openArchive?.()}><Icon name="history" size={13} /><span>Архив</span><small>{outline.archived || ''}</small></button></div>

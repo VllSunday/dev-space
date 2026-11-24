@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { api, uploadSpaceFile } from '../desktop/client'
 import { Icon, TopicIcon } from '../desktop/Icons'
-import ZoneView, { type Outline } from '../plugins/ZoneView'
+import ZoneView, { OutlineView, type Outline } from '../plugins/ZoneView'
 import type { PluginsState, Thing } from '../plugins/types'
 import type { Board, Project, SpaceState, Zone, ZoneSource } from '../devspace/model'
 import type { StatusGroup } from '../../desktop/service/things.mjs'
@@ -171,13 +171,20 @@ export function BoardSurface({ api, welcome }: { api: BoardApi; welcome?: ReactN
     if (free) return <ZoneCard key={zone.id} {...common} box={box} dragging={drag?.id === zone.id} style={{ left: box.x * CELL, top: box.y * CELL, width: box.w * CELL, height: box.h * CELL }} onGrab={event => track(event, zone, 'move')} onResize={event => { event.stopPropagation(); track(event, zone, 'size') }} />
     return <div key={zone.id} className={'bd-slot' + (reorder === zone.id ? ' moving' : '')} draggable onDragStart={event => { if ((event.target as HTMLElement).closest('.bd-zone-body')) return; event.dataTransfer.setData('text/devspace-zone', zone.id); event.dataTransfer.effectAllowed = 'move'; setReorder(zone.id) }} onDragEnd={() => setReorder(null)} onDragOver={event => { if (event.dataTransfer.types.includes('text/devspace-zone')) event.preventDefault() }} onDrop={event => { if (event.dataTransfer.types.includes('text/devspace-zone')) { event.preventDefault(); dropBefore(zone.id) } }}><ZoneCard {...common} box={{ ...box, w: 16, h: Math.min(box.h, 22) }} /></div>
   })
-  return <div className={`bd-surface bg-${kind.look.background || 'dots'} zone-${kind.look.zone || 'card'} density-${kind.look.density || 'cozy'} layout-${kind.layout}`} ref={surface} onPointerDown={pan} style={kind.look.accent ? { '--bd-accent': kind.look.accent } as CSSProperties : undefined}>
+  // The project's navigation stays next to the board as a pinned panel. It is the
+  // same «Навигатор проекта» view a zone can show; hiding it is remembered per viewer.
+  const [nav, setNav] = useState(() => { try { return localStorage.getItem('devspace.board.nav') !== 'off' } catch { return true } })
+  const toggleNav = () => setNav(value => { try { localStorage.setItem('devspace.board.nav', value ? 'off' : 'on') } catch { /* private window */ } return !value })
+  return <div className="bd-work">
+    {nav ? <aside className="bd-nav pv" aria-label="Навигация проекта"><header><span>Навигация</span><button type="button" className="ds-icon" aria-label="Скрыть навигацию" title="Скрыть навигацию" onClick={toggleNav}><Icon name="back" size={13} /></button></header><OutlineView outline={outline} handlers={{ open: () => {}, openZone: (boardId, zoneId) => { const target = data.boards.find(item => item.id === boardId)?.zones.find(item => item.id === zoneId); if (target) api.openZone(target, boardId) }, openArchive: api.openArchive }} /></aside>
+      : <button type="button" className="bd-nav-open" aria-label="Показать навигацию" title="Показать навигацию" onClick={toggleNav}><Icon name="menu" size={14} /></button>}
+    <div className={`bd-surface bg-${kind.look.background || 'dots'} zone-${kind.look.zone || 'card'} density-${kind.look.density || 'cozy'} layout-${kind.layout}`} ref={surface} onPointerDown={pan} style={kind.look.accent ? { '--bd-accent': kind.look.accent } as CSSProperties : undefined}>
     {!board.zones.length ? <div className="bd-blank"><h2>На этой доске пока пусто</h2><p>Доска состоит из зон. Зона — это группа вещей с вашим названием: заметки, картинки, модели, документы или задачи.</p><p className="ds-muted">Нажмите «Добавить» вверху: создайте зону или опишите словами, что хотите здесь видеть.</p></div>
       : free ? <div className={'bd-canvas' + (welcome ? ' short' : '')} style={{ width, height: welcome ? height - 140 : height }}>{kind.links && <Links zones={visible} boxes={boxes} things={things} data={data} />}{cards}</div>
       : <div className="bd-flow">{cards}</div>}
     {welcome}
     {hidden.length > 0 && <footer className="bd-shelf" aria-label="Скрытые зоны"><span>Скрыто</span>{hidden.map(zone => <button type="button" key={zone.id} title="Вернуть на доску" onClick={() => void api.mutate({ action: 'zone-update', boardId: board.id, zoneId: zone.id, hidden: false }).catch(() => {})}><i style={{ background: zone.color || 'var(--ds-faint)' }} />{zone.name}<small>{things[zone.id]?.length || ''}</small></button>)}</footer>}
-  </div>
+  </div></div>
 }
 
 // One zone up close: the same view at full size, with a place to add things.

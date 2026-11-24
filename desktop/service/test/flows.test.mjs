@@ -126,6 +126,17 @@ test('task → work → review → decision runs on built-in tasks and stops at 
     const stopped = await service.flows.resolve(run.id, 'stop');
     assert.equal(stopped.status, 'stopped');
     assert.equal((await tasks()).find(task => task.id === taken).status, 'working');
+    // Every choice left a record: who chose, among which options, under which policy.
+    const records = await service.flows.decisions(run.id), of = kind => records.filter(entry => entry.kind === kind);
+    assert.deepEqual(of('connection').map(entry => [entry.choice, entry.by, entry.options.includes('tasks-local')]), [['tasks-local', 'person', true]]);
+    assert.deepEqual(of('agent').map(entry => entry.choice), ['new:stub', 'new:stub']);
+    assert.deepEqual(of('step').slice(0, 4).map(entry => `${entry.step}:${entry.choice}:${entry.by}`), ['take:taken:code', 'start:ok:code', 'work:done:agent:stub', 'check:remarks:agent:stub']);
+    assert.deepEqual(of('step')[3].options, ['clean', 'remarks'], 'the options are the outputs the agent was allowed');
+    assert.ok(of('step').every(entry => entry.policy.name === 'flow:task-review' && /^[0-9a-f]{12}$/.test(entry.policy.version)));
+    assert.equal(of('call-person').length, 2); assert.match(of('call-person')[0].situation, /Сработал предел возвратов/);
+    assert.deepEqual(of('resolve').map(entry => `${entry.choice}:${entry.by}:${entry.options}`), ['continue:person:continue,stop', 'stop:person:continue,stop']);
+    assert.deepEqual(of('outcome').map(entry => entry.choice), ['stopped']);
+    assert.deepEqual(records.map(entry => entry.at), records.map(entry => entry.at).sort(), 'records are appended in order');
   } finally { process.env.DEVSPACE_STUB_MODE = ''; await service.close(); }
 });
 const fetchSettings = async service => (await (await fetch(service.origin + '/api/bootstrap', { headers: { Authorization: 'Bearer ' + service.token } })).json()).settings;

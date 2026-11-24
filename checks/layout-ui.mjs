@@ -30,7 +30,7 @@ try {
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const rects = await page.evaluate(() => {
           const rect = selector => { const r = document.querySelector(selector)?.getBoundingClientRect(); return r && { left: r.left, right: r.right, width: r.width }; };
-          return { shell: rect('.dev-space'), canvas: rect('.ds-place'), header: rect('.bd-header'), surface: rect('.bd-surface'), pane: rect('.ds-agent-pane'), viewport: innerWidth, scroll: document.documentElement.scrollWidth };
+          return { shell: rect('.dev-space'), canvas: rect('.ds-place'), header: rect('.bd-header'), surface: rect('.bd-work'), pane: rect('.ds-agent-pane'), viewport: innerWidth, scroll: document.documentElement.scrollWidth };
         });
         assert.ok(Math.abs(rects.shell.width - width) <= 1, `shell must fill ${width}px: ${JSON.stringify(rects)}`);
         assert.ok(Math.abs((agentsOpen&&width<=1150?rects.pane.right:rects.canvas.right) - (width - 8)) <= 1, `rightmost area must reach the window edge: ${JSON.stringify(rects)}`);
