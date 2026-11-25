@@ -19,12 +19,16 @@ for(const id of ['agent-a','agent-b'])service.sessions.items.set(id,service.sess
 let browser;
 try{
  browser=await launchBrowser();const context=await browser.newContext({viewport:{width:1500,height:900}});await desktopAuth(context,service.urls.workspace,'ru');
- const page=await context.newPage();await page.goto(service.urls.workspace);await expect(page.locator('.ds-wiki')).toBeVisible();
+ const page=await context.newPage();await page.goto(service.urls.workspace);await expect(page.locator('.bd-surface')).toBeVisible();
+ const zone=name=>page.locator(`.bd-zone[aria-label="Зона ${name}"]`),command=async name=>{await page.keyboard.press('Control+k');await page.getByRole('textbox',{name:'Поиск команд',exact:true}).fill(name);await page.locator('.ds-command-results').getByRole('button',{name,exact:true}).click()};
+ // The board replaces the sidebar: topics are zones, pages live in «Документы».
+ await expect(zone('Локации').locator('.pv-list .pv-row')).toHaveCount(8);await expect(zone('Фото').locator('.pv-tiles.gallery .pv-tile')).toHaveCount(4);
+ await zone('Документы').locator('.pv-row .pv-open',{hasText:'Project Wiki'}).click();await expect(page.locator('.ds-wiki')).toBeVisible();
  await page.keyboard.press('Control+j');await page.keyboard.press('Control+Shift+o');await expect(page.locator('.agent-cell')).toHaveCount(2);await page.locator('.agent-cell').evaluateAll(cells=>cells.forEach((cell,i)=>cell.dataset.lifeToken='pane-'+i));
  await expect(page.locator('[data-collection-topic=locations] .ds-collection-card')).toHaveCount(8);
  await expect(page.locator('.ds-wiki nav')).toHaveCount(0);
- await page.locator('.ds-navigation').getByRole('button',{name:'Локации',exact:true}).click();await expect(page.locator('.ds-content-heading h1')).toHaveText('Локации');await expect(page.locator('.ds-topic-record')).toHaveCount(12);
- await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.locator('.ds-wiki')).toBeVisible();
+ await page.locator('.ds-location').getByRole('button',{name:'Главная',exact:true}).click();await zone('Локации').locator('.pv-open',{hasText:'Location 12'}).click();await expect(page.locator('.ds-topic-record.target')).toHaveAttribute('data-material-id','loc-12');await expect(page.locator('.ds-content-heading h1')).toHaveText('Локации');await expect(page.locator('.ds-topic-record')).toHaveCount(12);
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.locator('.bd-surface')).toBeVisible();await page.keyboard.press('Alt+ArrowLeft');await expect(page.locator('.ds-wiki')).toBeVisible();
  await page.getByRole('button',{name:'Открыть: Location 1',exact:true}).click();await expect(page.locator('.ds-topic-record.target')).toHaveAttribute('data-material-id','loc-1');
  await page.getByRole('button',{name:'Редактировать материал',exact:true}).click();
  await expect(page.getByRole('textbox',{name:'Текст материала',exact:true})).toBeVisible();await expect(page.locator('.ds-dialog[aria-label="Материал"]')).toHaveCount(0);
@@ -48,12 +52,12 @@ try{
  await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('button',{name:'Редактор',exact:true})).toHaveAttribute('aria-pressed','true');
  await page.getByRole('button',{name:'Открыть: Location 1',exact:true}).click();await expect(page.getByRole('textbox',{name:'Текст материала',exact:true})).toBeFocused();
  await page.getByRole('button',{name:'Назад',exact:true}).click();await page.getByRole('button',{name:'Wiki',exact:true}).click();
- await page.locator('.ds-navigation').getByRole('button',{name:'Все изображения',exact:true}).click();await expect(page.locator('.ds-photo-record')).toHaveCount(5);await expect(page.locator('.ds-record-summary')).toHaveCount(0);
+ await command('Все материалы');await expect(page.locator('.ds-topic-record')).toHaveCount(16);await page.getByRole('button',{name:'Галерея',exact:true}).click();await expect(page.locator('.ds-location strong')).toHaveText('Галерея · Project');await expect(page.locator('.ds-photo-record')).toHaveCount(5);await expect(page.locator('.ds-record-summary')).toHaveCount(0);
  await page.locator('.ds-photo-record').first().locator('a').click();await expect(page.locator('.mak-lightbox[open]')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('.mak-lightbox')).toHaveCount(0);
  await page.getByRole('button',{name:'Закрепить на главной',exact:true}).click();await expect(page.getByRole('button',{name:'На главной',exact:true})).toHaveAttribute('aria-pressed','true');
  await expect(page.locator('.agent-cell[data-life-token]')).toHaveCount(2);
  await page.reload();await expect(page.getByRole('button',{name:'Назад',exact:true})).toBeEnabled();
- await page.locator('.ds-location').getByRole('button',{name:'Project',exact:true}).click();await expect(page.locator('[data-collection-topic=all][data-collection-view=gallery]')).toBeVisible();
+ await expect(page.locator('.ds-location').getByRole('button',{name:'Главная',exact:true})).toBeVisible();await command('Страница: Project Wiki');await expect(page.locator('[data-collection-topic=all][data-collection-view=gallery]')).toBeVisible();
  await page.screenshot({path:'.cache/wiki-navigation-desktop.png'});
  await page.getByRole('button',{name:'Markdown',exact:true}).click();await page.getByRole('textbox',{name:'Markdown страницы',exact:true}).fill('Draft kept while navigating');
  await page.goBack();await expect(page.locator('.ds-photo-record')).toHaveCount(5);await page.goForward();await expect(page.getByRole('textbox',{name:'Markdown страницы',exact:true})).toHaveValue('Draft kept while navigating');
@@ -65,11 +69,11 @@ try{
  let releaseSave,held=false;const waitToSave=new Promise(resolve=>releaseSave=resolve);
  await page.route('**/api/devspace',async route=>{const data=route.request().method()==='POST'?route.request().postDataJSON():null;if(data?.action==='update-page'&&data.blocks?.some(b=>b.text==='Paused older save')){held=true;await waitToSave}await route.continue()});
  await page.getByRole('textbox',{name:'Markdown страницы',exact:true}).fill('Paused older save');
- await page.locator('.ds-navigation').getByRole('button',{name:'Локации',exact:true}).click();await expect.poll(()=>held).toBe(true);
+ await command('Все материалы');await expect(page.locator('.ds-topic-record')).toHaveCount(16);await expect.poll(()=>held).toBe(true);
  await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('textbox',{name:'Markdown страницы',exact:true})).toBeVisible();
  await page.getByRole('textbox',{name:'Markdown страницы',exact:true}).fill('Newer draft must survive');
  const storedDraft=async()=>await(await fetch(service.origin+'/api/devspace/drafts?key='+encodeURIComponent('page:home:markdown'),{headers:{Authorization:`Bearer ${service.token}`}})).json();
  await expect.poll(async()=>(await storedDraft()).text).toBe('Newer draft must survive');
  releaseSave();await page.waitForTimeout(500);expect((await storedDraft()).text).toBe('Newer draft must survive');expect((await storedDraft()).cleared).not.toBe(true);
- console.log('PASS: 8 previews, topic navigation, record targeting, inline editing, image-only gallery, lightbox, home pinning and Markdown recovery');
+ console.log('PASS: board zones, 8 previews, zone card to topic feed, record targeting, inline editing, image-only gallery, lightbox, home pinning and Markdown recovery');
 }finally{await browser?.close();await service.close()}

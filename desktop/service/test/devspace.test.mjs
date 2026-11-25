@@ -66,10 +66,14 @@ test('agent proposal is reviewed and applied as separate page; sources remain',a
  state=await op({action:'apply-proposal',id:'ready'});assert.equal(state.pages[0].title,proposal.title);assert.equal(state.pages[0].sourceIds[0],state.materials[0].id);assert.equal(state.materials[0].text,'Исходные слова');assert.equal((await store.proposals()).length,0);
  state=await op({action:'undo'});assert.equal(state.pages.length,0);assert.equal(state.materials.length,1);
 });
-test('stale proposal is retained and cannot overwrite changed content',async()=>{
+test('a proposal made for an earlier version still adds its page and overwrites nothing',async()=>{
  const {store,repo,op}=await fixture();const projectId=(await store.read()).projects[0].id;
- await writeFile(path.join(repo,'workspace/devspace/proposals/stale.json'),JSON.stringify({schemaVersion:1,projectId,baseRevision:0,title:'Old',sourceIds:[],blocks:[]}));await op({action:'create-topic',projectId,name:'Изменение'});
- assert.equal((await store.proposals())[0].stale,true);await assert.rejects(op({action:'apply-proposal',id:'stale'}),e=>e.status===409);assert.ok((await readdir(path.join(repo,'workspace/devspace/proposals'))).includes('stale.json'));
+ await writeFile(path.join(repo,'workspace/devspace/proposals/older.json'),JSON.stringify({schemaVersion:1,projectId,baseRevision:0,title:'Old',sourceIds:[],blocks:[]}));const changed=await op({action:'create-topic',projectId,name:'Изменение'});
+ assert.equal((await store.proposals())[0].stale,true);
+ // A proposal only adds a page. Moving a zone or adding a topic meanwhile is not a conflict.
+ const applied=await op({action:'apply-proposal',id:'older'});assert.equal(applied.pages.at(-1).title,'Old');assert.deepEqual(applied.projects[0].topics,changed.projects[0].topics);
+ await writeFile(path.join(repo,'workspace/devspace/proposals/future.json'),JSON.stringify({schemaVersion:1,projectId,baseRevision:999,title:'Future',sourceIds:[],blocks:[]}));
+ await assert.rejects(op({action:'apply-proposal',id:'future'}),e=>e.status===409);assert.ok((await readdir(path.join(repo,'workspace/devspace/proposals'))).includes('future.json'));
 });
 test('invalid project folder does not create a half-configured project',async()=>{
  const {store,op,repo}=await fixture();await assert.rejects(op({action:'create-project',name:'Ошибка',path:path.join(repo,'missing')}));assert.equal((await store.read()).projects.length,1);

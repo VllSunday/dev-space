@@ -1,0 +1,20 @@
+{
+  "plugin": 1, "id": "tasks", "name": "Задачи Dev Space", "version": "1.0.0",
+  "description": "Задачи проекта списком, доской или таблицей. Играет роль «Трекер задач», поэтому флоу работают без внешнего сервиса.",
+  "views": [
+    { "id": "checklist", "title": "Чек-лист", "level": "zone", "accepts": ["task"], "actions": ["thing.open", "thing.status", "thing.create"], "render": { "type": "parts", "parts": [{ "part": "list", "fields": ["status"] }] } },
+    { "id": "columns", "title": "Доска задач", "level": "zone", "accepts": ["task"], "actions": ["thing.open", "thing.status", "thing.create"], "render": { "type": "parts", "parts": [{ "part": "columns", "by": "statusGroup", "columns": [{ "value": "todo", "title": "Надо" }, { "value": "doing", "title": "В работе" }, { "value": "done", "title": "Готово" }] }] } },
+    { "id": "table", "title": "Таблица задач", "level": "zone", "accepts": ["task"], "actions": ["thing.open", "thing.status"], "render": { "type": "parts", "parts": [{ "part": "table", "columns": [{ "field": "key", "title": "№" }, { "field": "title", "title": "Задача" }, { "field": "status", "title": "Статус" }, { "field": "assignee", "title": "Кто" }] }] } },
+    { "id": "task", "title": "Задача", "level": "thing", "accepts": ["task"], "actions": ["thing.open", "thing.status"], "render": { "type": "native", "component": "task" } }
+  ],
+  "connections": [
+    {
+      "id": "local", "title": "Задачи проекта", "description": "Встроенные задачи Dev Space.", "itemKind": "task",
+      "operations": {
+        "list": { "kind": "read", "title": "список задач проекта", "request": { "native": "tasks.list" } },
+        "setStatus": { "kind": "action", "title": "сменить статус задачи", "params": { "id": { "title": "задача", "required": true }, "status": { "title": "группа статуса", "required": true } }, "request": { "native": "tasks.setStatus" } }
+      },
+      "plays": { "role": "tracker", "version": 1, "operations": { "list": "list", "setStatus": "setStatus" }, "statuses": { "todo": "Надо", "doing": "В работе", "done": "Готово" } }
+    }
+  ]
+}

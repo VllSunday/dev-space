@@ -1,0 +1,152 @@
+{
+  "plugin": 1,
+  "id": "core",
+  "name": "Основные виды",
+  "version": "1.0.0",
+  "description": "Список, плитки, галерея, лента материалов, навигатор по проекту и свободная доска.",
+  "views": [
+    {
+      "id": "list",
+      "title": "Список",
+      "level": "zone",
+      "accepts": [
+        "*"
+      ],
+      "actions": [
+        "thing.open"
+      ],
+      "render": {
+        "type": "parts",
+        "parts": [
+          {
+            "part": "list"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tiles",
+      "title": "Плитки",
+      "level": "zone",
+      "accepts": [
+        "*"
+      ],
+      "actions": [
+        "thing.open"
+      ],
+      "render": {
+        "type": "parts",
+        "parts": [
+          {
+            "part": "tiles"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gallery",
+      "title": "Галерея",
+      "level": "zone",
+      "accepts": [
+        "image"
+      ],
+      "actions": [
+        "thing.open"
+      ],
+      "render": {
+        "type": "parts",
+        "parts": [
+          {
+            "part": "gallery"
+          }
+        ]
+      }
+    },
+    {
+      "id": "feed",
+      "title": "Лента с описанием",
+      "description": "Материалы темы подряд, с описанием темы и местом для записи. Так выглядели темы раньше.",
+      "level": "zone",
+      "accepts": [
+        "note",
+        "image",
+        "file",
+        "link",
+        "model"
+      ],
+      "actions": [
+        "thing.open",
+        "thing.create"
+      ],
+      "render": {
+        "type": "native",
+        "component": "materials"
+      }
+    },
+    {
+      "id": "outline",
+      "title": "Навигатор проекта",
+      "description": "Плотный список досок, зон, документов и задач.",
+      "level": "zone",
+      "accepts": [
+        "*"
+      ],
+      "actions": [
+        "thing.open"
+      ],
+      "render": {
+        "type": "parts",
+        "parts": [
+          {
+            "part": "outline"
+          }
+        ]
+      }
+    },
+    {
+      "id": "material",
+      "title": "Материал",
+      "level": "thing",
+      "accepts": [
+        "note",
+        "file",
+        "link"
+      ],
+      "actions": [
+        "thing.open"
+      ],
+      "render": {
+        "type": "native",
+        "component": "material"
+      }
+    },
+    {
+      "id": "image",
+      "title": "Изображение",
+      "level": "thing",
+      "accepts": [
+        "image"
+      ],
+      "actions": [
+        "thing.open"
+      ],
+      "render": {
+        "type": "native",
+        "component": "image"
+      }
+    }
+  ],
+  "boards": [
+    {
+      "id": "free",
+      "title": "Свободная доска",
+      "description": "Зоны лежат там, где вы их оставили.",
+      "layout": "free",
+      "look": {
+        "background": "dots",
+        "zone": "card",
+        "density": "cozy"
+      }
+    }
+  ]
+}

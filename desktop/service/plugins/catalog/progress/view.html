@@ -1,0 +1,43 @@
+<style>
+  body { margin: 0; font: 13px/1.5 var(--ds-font, system-ui); color: var(--ds-text, #eee); background: transparent; }
+  .wrap { display: flex; align-items: center; gap: 18px; padding: 12px 14px; }
+  svg { flex: none; }
+  .track { stroke: var(--ds-border, #ffffff18); }
+  .done { stroke: var(--ds-good, #9cc5a3); transition: stroke-dashoffset .3s; }
+  .doing { stroke: var(--ds-accent, #96b2d7); transition: stroke-dashoffset .3s; }
+  b { font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+  dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 2px 12px; }
+  dt { color: var(--ds-muted, #a2a3a6); } dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  ul { margin: 0; padding: 0 14px 12px; list-style: none; }
+  li { padding: 3px 0; border-top: 1px solid var(--ds-border, #ffffff18); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  li:hover { color: var(--ds-accent, #96b2d7); }
+</style>
+<div class="wrap">
+  <svg width="76" height="76" viewBox="0 0 76 76" fill="none" stroke-width="7" stroke-linecap="round" role="img" aria-label="Доля готовых задач">
+    <circle class="track" cx="38" cy="38" r="31"/>
+    <circle class="doing" id="doing" cx="38" cy="38" r="31" transform="rotate(-90 38 38)"/>
+    <circle class="done" id="done" cx="38" cy="38" r="31" transform="rotate(-90 38 38)"/>
+  </svg>
+  <div><b id="share">0%</b><dl><dt>Готово</dt><dd id="nDone">0</dd><dt>В работе</dt><dd id="nDoing">0</dd><dt>Не начато</dt><dd id="nTodo">0</dd></dl></div>
+</div>
+<ul id="next"></ul>
+<script>
+  const length = 2 * Math.PI * 31;
+  const arc = (id, share) => { const el = document.getElementById(id); el.style.strokeDasharray = length; el.style.strokeDashoffset = length * (1 - share); };
+  addEventListener('message', event => {
+    if (event.data?.type !== 'devspace:data') return;
+    const things = event.data.things, count = group => things.filter(thing => thing.statusGroup === group).length;
+    const done = count('done'), doing = count('doing'), total = things.length || 1;
+    arc('doing', (done + doing) / total); arc('done', done / total);
+    document.getElementById('share').textContent = Math.round(done / total * 100) + '%';
+    document.getElementById('nDone').textContent = done; document.getElementById('nDoing').textContent = doing; document.getElementById('nTodo').textContent = count('todo');
+    const list = document.getElementById('next'); list.textContent = '';
+    for (const thing of things.filter(thing => thing.statusGroup !== 'done').slice(0, 4)) {
+      const item = document.createElement('li'); item.textContent = thing.title;
+      item.onclick = () => parent.postMessage({ type: 'devspace:action', action: 'thing.open', ref: thing.ref }, '*');
+      list.append(item);
+    }
+    parent.postMessage({ type: 'devspace:size', height: document.documentElement.scrollHeight }, '*');
+  });
+  parent.postMessage({ type: 'devspace:ready' }, '*');
+</script>

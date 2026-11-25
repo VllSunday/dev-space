@@ -1,0 +1,7 @@
+{
+  "plugin": 1, "id": "columns", "name": "Ровные колонки", "version": "1.0.0",
+  "description": "Меняет саму доску: зоны сами встают в ровные колонки и не перекрываются. Перетаскивание меняет порядок, а не место.",
+  "boards": [
+    { "id": "tidy", "title": "Ровные колонки", "description": "Зоны выстраиваются сами; перетаскивание меняет порядок.", "layout": "columns", "look": { "background": "plain", "zone": "outline", "density": "compact" } }
+  ]
+}

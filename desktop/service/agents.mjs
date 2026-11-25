@@ -21,6 +21,8 @@ export const AGENTS = [
   { id: 'opencode', label: 'OpenCode', color: '#c8d2dc', command: 'opencode', subscription: false },
   { id: 'kimi', label: 'Kimi', color: '#b3a3f7', command: 'kimi', subscription: true },
   { id: 'shell', label: shellLabel(), color: '#89b7ed', command: 'shell', subscription: false },
+  // A scripted stand-in for a CLI agent, present only in flow checks.
+  ...(process.env.DEVSPACE_STUB_AGENT ? [{ id: 'stub', label: 'Агент-заглушка', color: '#a2a3a6', command: 'stub', subscription: false }] : []),
 ];
 
 export function commandPath(name, env = process.env, home) {
@@ -30,7 +32,7 @@ export function commandPath(name, env = process.env, home) {
 export function inventory(env = process.env) {
   const shell = shellCommand(env);
   const shellAvailable = path.isAbsolute(shell.file) ? existsSync(shell.file) : !!commandPath(shell.file, env);
-  return AGENTS.map(agent => ({ ...agent, available: agent.id === 'shell' ? shellAvailable : !!commandPath(agent.command, env) }));
+  return AGENTS.map(agent => ({ ...agent, available: agent.id === 'shell' ? shellAvailable : agent.id === 'stub' ? true : !!commandPath(agent.command, env) }));
 }
 
 // Resolve the real Codex binary when available so JSON-RPC does not pass through a shell.
@@ -88,8 +90,9 @@ export function codexSupportsNoDaemon(env = process.env) {
   return codexHelp.get(key);
 }
 
-export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false } = {}) {
+export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false, allowDevspace = false } = {}) {
   if (!AGENTS.some(item => item.id === agent)) throw new Error('Unknown agent');
+  if (agent === 'stub') return { file: process.execPath, args: [process.env.DEVSPACE_STUB_AGENT] };
   resumeId = nativeConversationId(resumeId); nativeId = nativeConversationId(nativeId);
   initialPrompt = initialPromptArgument(initialPrompt);
   if (initialPrompt && (resumeId || !['codex', 'claude'].includes(agent))) throw new Error('Only a new Codex or Claude chat can start with a message.');
@@ -115,6 +118,9 @@ export function terminalCommand(agent, { bypass = false, resumeId, nativeId, eff
     if (resumeId) args.push('--resume', resumeId);
     else if (nativeId) args.push('--session-id', nativeId);
     if (bypass) args.push('--dangerously-skip-permissions');
+    // Only when the owner turned it on: the agent may run the `devspace` command
+    // without asking each time. No other permission changes.
+    else if (allowDevspace) args.push('--allowedTools', 'Bash(devspace:*)');
     if (effort) args.push('--effort', effort);
     if (readDir) args.push('--add-dir', readDir);
   } else if (agent === 'antigravity') {

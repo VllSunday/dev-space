@@ -165,6 +165,8 @@ export class Sessions extends EventEmitter {
 
   async launch(session, resumeId, nativeWatch, first = {}) {
     let env = childEnvironment(this.repo);
+    // The `devspace` command and this terminal's own token for the command pool.
+    Object.assign(env, this.extraEnvironment?.(session, env));
     let opencodeMajor;
     if (session.agent === 'opencode') {
       opencodeMajor = await opencodeVersion(env);
@@ -179,7 +181,7 @@ export class Sessions extends EventEmitter {
     const antigravityLog = session.agent === 'antigravity' ? await prepareAntigravityLog(this.stateDir, session.id) : undefined;
     const noDaemon = session.agent === 'codex' && await codexSupportsNoDaemon(env);
     if (this.closed || !session.open) throw new Error('The chat was closed before its terminal started.');
-    const command = terminalCommand(session.agent, { bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, ...first });
+    const command = terminalCommand(session.agent, { allowDevspace: this.allowDevspace?.() === true, bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, ...first });
     if (session.agent === 'codex') env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE = `mrmak_chat_${session.id}`;
     if (session.terminal) this.resetTerminal(session);
     const proc = pty.spawn(command.file, command.args, ptyOptions({ cwd: session.cwd, env, cols: session.cols, rows: session.rows }));

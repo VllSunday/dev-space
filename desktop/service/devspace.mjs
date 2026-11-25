@@ -5,6 +5,7 @@ import { createReadStream } from 'node:fs';
 import { saveJson, realFile } from './util.mjs';
 import { instantiateTemplate } from './project-template.mjs';
 import { pageFlow, reconcileFlow, validateFlow } from './page-flow.mjs';
+import { boardKind, boardName, ensureBoards, makeZone, nextPlace, presetBoard, pruneBoards, refExists, zoneColors, zonePatch, zoneSource } from './boards.mjs';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const id = prefix => `${prefix}-${randomUUID().slice(0, 12)}`;
@@ -43,13 +44,29 @@ export class DevSpace {
       let legacy; try { legacy = JSON.parse(await readFile(path.join(this.repo, 'workspace', 'workspace.json'), 'utf8')); } catch { legacy = { entities: [] }; }
       const projects = (legacy.spaces?.length ? legacy.spaces : [{ id: 'default', name: 'Мой проект', sections: [] }]).map(p => ({ id: p.id, name: p.name, path: this.repo, topics: (p.sections || []).filter(t => !['inbox', 'context'].includes(t.id)).map(t => ({ id: t.id, name: t.name })) }));
       const materials = (legacy.entities || []).map(m => ({ id: m.id, projectId: projects.some(p => p.id === m.spaceId) ? m.spaceId : projects[0].id, topicId: projects.find(p=>p.id===(m.spaceId||projects[0].id))?.topics.some(t=>t.id===m.category) ? m.category : 'unfiled', title: m.title, text: m.description || '', kind: 'legacy', legacyId: m.id, files: [], archived: m.status === 'archived', created: m.created || now(), updated: now() }));
-      await saveJson(this.file, { schemaVersion: 1, revision: 0, projects, materials, pages: [], tasks: [] });
+      const fresh = { schemaVersion: 1, revision: 0, projects, materials, pages: [], tasks: [] };
+      ensureBoards(fresh);
+      await saveJson(this.file, fresh);
     }
+    await this.addBoards();
     return this;
+  }
+  // Projects saved before boards existed get their first board here. The change
+  // only adds `boards`; a copy of the file is kept and the step can be undone.
+  async addBoards() {
+    const state = JSON.parse(await readFile(this.file, 'utf8'));
+    if (state.schemaVersion !== 1 || !Array.isArray(state.projects)) return;
+    const before = structuredClone(state);
+    if (!ensureBoards(state)) return;
+    if (!before.boards) await writeFile(path.join(this.folder, 'space.before-boards.json'), JSON.stringify(before, null, 2) + '\n', { flag: 'wx' }).catch(error => { if (error.code !== 'EEXIST') throw error; });
+    await saveJson(path.join(this.folder, 'history', state.revision + '.json'), before);
+    state.revision++;
+    await saveJson(this.file, state);
   }
   async read() {
     const state = JSON.parse(await readFile(this.file, 'utf8'));
     if (state.schemaVersion !== 1 || !Number.isSafeInteger(state.revision) || !['projects','materials','pages','tasks'].every(k => Array.isArray(state[k]))) throw fail('Хранилище повреждено. Восстановите копию из history.', 500);
+    state.boards ||= [];
     return state;
   }
   async proposals() {
@@ -92,13 +109,20 @@ export class DevSpace {
       drafts[data.key]={text:content,files,version:data.version,baseline:typeof data.baseline==='string'?text(data.baseline):null,cleared:!!data.cleared};await saveJson(path.join(this.folder,'drafts.json'),drafts);return drafts[data.key];
     });this.queue=operation;return operation;
   }
-  mutate(data) {
+  // `latest` is for changes the service makes itself (a flow step, a plugin
+  // operation): they apply to whatever the current version is.
+  mutate(data, { latest = false } = {}) {
     const next = this.queue.catch(() => {}).then(async () => {
       const state = await this.read();
-      if (data.baseRevision !== state.revision) throw fail('Содержимое изменилось. Обновите данные и повторите действие; ваш черновик сохранён.', 409);
+      if (!latest && data.baseRevision !== state.revision) throw fail('Содержимое изменилось. Обновите данные и повторите действие; ваш черновик сохранён.', 409);
       const before = structuredClone(state), project = state.projects.find(p => p.id === data.projectId);
       const topicExists = (p, t) => t === 'unfiled' || p?.topics.some(x => x.id === t);
       const material = state.materials.find(m => m.id === data.id), page = state.pages.find(p => p.id === data.id);
+      const board = state.boards.find(b => b.id === data.boardId), boardProject = board && state.projects.find(p => p.id === board.projectId), zone = board?.zones.find(z => z.id === data.zoneId);
+      const needBoard = () => { if (!board || !boardProject) throw fail('Доска не найдена.', 404); return board; };
+      const needZone = () => { needBoard(); if (!zone) throw fail('Зона не найдена.', 404); return zone; };
+      // A new thing created inside a hand-picked zone is added to that zone.
+      const place = ref => { if (zone?.source.kind === 'refs' && board.projectId === project?.id && !zone.source.refs.includes(ref)) zone.source.refs.unshift(ref); };
       switch (data.action) {
         case 'import-template': {
           const example=await instantiateTemplate(this.repo,data.templateId),base=example.projects[0].name;
@@ -109,7 +133,7 @@ export class DevSpace {
         case 'create-project': {
           let folder = data.path?.trim() || this.repo; folder = path.resolve(folder);
           if (!(await stat(folder).catch(() => null))?.isDirectory()) throw fail('Выберите существующую папку проекта.');
-          state.projects.push({ id: id('project'), name: name(data.name), path: folder, topics: [] }); break;
+          const created = { id: id('project'), name: name(data.name), path: folder, topics: [] }; state.projects.push(created); state.boards.push(presetBoard(state, created, data.preset || 'empty')); break;
         }
         case 'rename-project': if (!project) throw fail('Проект не найден.'); project.name = name(data.name); break;
         case 'project-home': if (!project || data.pageId && !state.pages.some(p=>p.id===data.pageId&&p.projectId===project.id)) throw fail('Главная страница проекта не найдена.'); project.homePageId = data.pageId || null; break;
@@ -148,13 +172,16 @@ export class DevSpace {
         case 'topic-move-block': {const t=project?.topics.find(t=>t.id===data.topicId);if(!t)throw fail('Тема не найдена.');const list=t.blocks||[],i=list.findIndex(b=>b.id===data.blockId),j=i+(data.direction==='up'?-1:1);if(i>=0&&j>=0&&j<list.length)[list[i],list[j]]=[list[j],list[i]];break;}
         case 'page-flow': {if(!page)throw fail('Страница не найдена.');if(data.expectedPageRevision!==page.revision)throw fail('Страница изменилась. Повторите изменение композиции.',409);try{page.flow=validateFlow(data.flow,page,state.projects.find(p=>p.id===page.projectId));}catch(error){throw fail(error.message)}page.revision++;page.updated=now();break;}
         case 'move-topic': { const i = project?.topics.findIndex(t => t.id === data.id), j = i + (data.direction === 'up' ? -1 : 1); if (i === undefined || i < 0 || j < 0 || j >= project.topics.length) break; [project.topics[i],project.topics[j]] = [project.topics[j],project.topics[i]]; break; }
-        case 'delete-topic': if (!project) throw fail('Проект не найден.'); project.topics = project.topics.filter(t => t.id !== data.id); for (const list of [state.materials,state.pages,state.tasks]) for (const item of list) if (item.projectId === project.id && item.topicId === data.id) item.topicId = 'unfiled'; for(const p of state.pages)if(p.projectId===project.id){if(p.collections)p.collections=p.collections.filter(c=>c.topicId!==data.id);if(p.flow)p.flow=p.flow.filter(n=>n.type!=='collection'||n.topicId!==data.id);} break;
+        case 'delete-topic': if (!project) throw fail('Проект не найден.'); project.topics = project.topics.filter(t => t.id !== data.id); for (const list of [state.materials,state.pages,state.tasks]) for (const item of list) if (item.projectId === project.id && item.topicId === data.id) item.topicId = 'unfiled'; for(const p of state.pages)if(p.projectId===project.id){if(p.collections)p.collections=p.collections.filter(c=>c.topicId!==data.id);if(p.flow)p.flow=p.flow.filter(n=>n.type!=='collection'||n.topicId!==data.id);}
+          // Zones of the removed topic keep showing its materials, which are now unfiled.
+          for (const b of state.boards) if (b.projectId === project.id) { const unfiled = b.zones.some(z => z.source.kind === 'topic' && z.source.topicId === 'unfiled'); let kept = unfiled; b.zones = b.zones.filter(z => { if (z.source.kind !== 'topic' || z.source.topicId !== data.id) return true; if (kept) return false; kept = true; z.source = { kind: 'topic', topicId: 'unfiled' }; return true; }); }
+          break;
         case 'create-material': {
           if (!project || !topicExists(project, data.topicId)) throw fail('Тема не найдена.');
           const files = await this.validateFiles(data.files || []), content = text(data.text || '');
           if (data.modelPageId && !state.pages.some(p=>p.id===data.modelPageId&&p.projectId===project.id)) throw fail('Страница для 3D-модели не найдена.');
           if (!content.trim() && !files.length) throw fail('Добавьте текст или файл.');
-          state.materials.unshift({ id: id('material'), projectId: project.id, topicId: data.topicId, title: (data.title || content.split('\n')[0] || files[0]?.name || 'Без названия').slice(0,160), text: content, kind: files.some(f => f.image) ? 'image' : files.length ? 'file' : /^https?:\/\/\S+$/.test(content) ? 'link' : 'note', files, ...(data.modelPageId ? {modelPageId: data.modelPageId} : {}), archived: false, created: now(), updated: now() }); break;
+          state.materials.unshift({ id: id('material'), projectId: project.id, topicId: data.topicId, title: (data.title || content.split('\n')[0] || files[0]?.name || 'Без названия').slice(0,160), text: content, kind: files.some(f => f.image) ? 'image' : files.length ? 'file' : /^https?:\/\/\S+$/.test(content) ? 'link' : 'note', files, ...(data.modelPageId ? {modelPageId: data.modelPageId} : {}), archived: false, created: now(), updated: now() }); place('material:' + state.materials[0].id); break;
         }
         case 'update-material': if (!material) throw fail('Материал не найден.'); if (data.title !== undefined) material.title = name(data.title); if (data.text !== undefined) material.text = text(data.text); if (data.topicId !== undefined) { if (!topicExists(state.projects.find(p=>p.id===material.projectId),data.topicId)) throw fail('Тема не найдена.'); material.topicId = data.topicId; } if (data.archived !== undefined) material.archived = !!data.archived; material.updated = now(); break;
         case 'material-files': {
@@ -175,7 +202,7 @@ export class DevSpace {
           for(const task of state.tasks)if(ids.has(task.sourceId))task.sourceId=null;
           break;
         }
-        case 'create-page': if (!project) throw fail('Проект не найден.'); state.pages.push({ id: id('page'), projectId: project.id, topicId: data.topicId || 'unfiled', title: name(data.title || 'Новая страница'), blocks: blocks(data.blocks || [{id:id('block'),type:'text',text:''}]), layout: data.layout === 'wiki' ? 'wiki' : 'document', ...(data.layout==='wiki'?{collections:[]}:{}), sourceIds: [], revision: 0, updated: now() }); break;
+        case 'create-page': if (!project) throw fail('Проект не найден.'); state.pages.push({ id: id('page'), projectId: project.id, topicId: data.topicId || 'unfiled', title: name(data.title || 'Новая страница'), blocks: blocks(data.blocks || [{id:id('block'),type:'text',text:''}]), layout: data.layout === 'wiki' ? 'wiki' : 'document', ...(data.layout==='wiki'?{collections:[]}:{}), sourceIds: [], revision: 0, updated: now() }); place('page:' + state.pages.at(-1).id); break;
         case 'update-page': if (!page) throw fail('Страница не найдена.'); if (data.title !== undefined) page.title = name(data.title); if (data.blocks !== undefined) { if(data.expectedPageRevision!==page.revision)throw fail('Страница изменилась во время редактирования Markdown. Ваш текст сохранён в редакторе; сравните версии.',409);const nextBlocks=blocks(data.blocks);page.flow=reconcileFlow(page.flow,page.blocks,nextBlocks);page.blocks=nextBlocks; } if (data.layout !== undefined) page.layout = data.layout === 'wiki' ? 'wiki' : 'document'; page.updated = now(); page.revision++; break;
         case 'collection': {
           if(!page)throw fail('Страница не найдена.');const owner=state.projects.find(p=>p.id===page.projectId);
@@ -192,12 +219,50 @@ export class DevSpace {
         case 'block': { if (!page) throw fail('Страница не найдена.'); const block = blocks([data.block])[0], index = page.blocks.findIndex(b => b.id === block.id); if (index >= 0) page.blocks[index] = block; else {if(data.flowIndex!==undefined&&!page.flow)page.flow=pageFlow(page,state.projects.find(p=>p.id===page.projectId));if(page.flow)page.flow.splice(Number.isInteger(data.flowIndex)?Math.max(0,Math.min(data.flowIndex,page.flow.length)):page.flow.length,0,{id:'flow-'+block.id,type:'block',blockId:block.id});page.blocks.splice(Number.isInteger(data.index) ? Math.max(0, Math.min(page.blocks.length, data.index)) : page.blocks.length,0,block);} page.revision++; page.updated=now(); break; }
         case 'delete-block': if (!page) throw fail('Страница не найдена.'); page.blocks = page.blocks.filter(b => b.id !== data.blockId);if(page.flow)page.flow=page.flow.filter(n=>n.type!=='block'||n.blockId!==data.blockId); page.revision++; break;
         case 'move-block': { if (!page) throw fail('Страница не найдена.'); const i=page.blocks.findIndex(b=>b.id===data.blockId),j=i+(data.direction==='up'?-1:1); if (i>=0&&j>=0&&j<page.blocks.length) [page.blocks[i],page.blocks[j]]=[page.blocks[j],page.blocks[i]]; page.revision++; break; }
-        case 'create-task': if (!project) throw fail('Проект не найден.'); state.tasks.push({id:id('task'),projectId:project.id,topicId:data.topicId||'unfiled',title:name(data.title),status:'todo',sourceId:data.sourceId||null}); break;
+        case 'create-task': if (!project) throw fail('Проект не найден.'); state.tasks.push({id:id('task'),projectId:project.id,topicId:data.topicId||'unfiled',title:name(data.title),status:['todo','working','review','done'].includes(data.status)?data.status:'todo',sourceId:data.sourceId||null}); place('task:' + state.tasks.at(-1).id); break;
         case 'task': { const task=state.tasks.find(t=>t.id===data.id); if(!task||!['todo','working','review','done'].includes(data.status)) throw fail('Задача или статус не найдены.'); task.status=data.status; break; }
-        case 'apply-proposal': { if(!ref(data.id))throw fail('Неверный ID.');const proposal = validateProposal(JSON.parse(await readFile(path.join(this.folder,'proposals',data.id+'.json'),'utf8')),state);if(proposal.baseRevision!==state.revision)throw fail('Предложение создано для прошлой версии. Попросите агента обновить его.',409);state.pages.push({...proposal,id:id('page'),revision:0,updated:now()});state.appliedProposals=[...(state.appliedProposals||[]),data.id];break; }
+        case 'update-task': { const task = state.tasks.find(t => t.id === data.id); if (!task) throw fail('Задача не найдена.'); if (data.title !== undefined) task.title = name(data.title); if (data.status !== undefined) { if (!['todo','working','review','done'].includes(data.status)) throw fail('Статус не найден.'); task.status = data.status; } break; }
+        case 'delete-task': if (!state.tasks.some(t => t.id === data.id)) throw fail('Задача не найдена.'); state.tasks = state.tasks.filter(t => t.id !== data.id); break;
+        case 'delete-page': { if (!page) throw fail('Страница не найдена.'); state.pages = state.pages.filter(p => p.id !== page.id); for (const p of state.projects) if (p.homePageId === page.id) p.homePageId = null; for (const m of state.materials) if (m.modelPageId === page.id) delete m.modelPageId; break; }
+        case 'board-create': { if (!project) throw fail('Проект не найден.'); if (state.boards.filter(b => b.projectId === project.id).length >= 50) throw fail('В проекте может быть до 50 досок.'); state.boards.push({ id: id('board'), projectId: project.id, name: boardName(data.name || 'Новая доска'), kind: 'core/free', zones: [] }); break; }
+        case 'board-update': { needBoard(); if (data.name !== undefined) board.name = boardName(data.name); if (data.kind !== undefined) board.kind = boardKind(data.kind); break; }
+        case 'board-delete': { needBoard(); if (state.boards.filter(b => b.projectId === board.projectId).length < 2) throw fail('У проекта должна остаться хотя бы одна доска.'); state.boards = state.boards.filter(b => b !== board); break; }
+        case 'zone-create': {
+          needBoard(); if (board.zones.length >= 200) throw fail('На доске может быть до 200 зон.');
+          const label = boardName(data.name || 'Новая зона');
+          let source = data.source;
+          // A new zone for notes and files gets its own topic, so its things stay together everywhere.
+          if (!source) { const topic = { id: id('topic'), name: label }; boardProject.topics.push(topic); source = { kind: 'topic', topicId: topic.id }; }
+          const created = makeZone(state, board.projectId, { name: label, view: zonePatch({ view: data.view || 'core/list' }).view, source: zoneSource(source, state, boardProject), color: zonePatch({ color: data.color ?? zoneColors[board.zones.length % zoneColors.length] }).color });
+          Object.assign(created, nextPlace(board, created.w), zonePatch({ x: data.x, y: data.y, w: data.w, h: data.h }));
+          created.h = Math.max(created.h, 8); board.zones.push(created); break;
+        }
+        case 'zone-update': {
+          needZone(); const patch = zonePatch(data, state, boardProject);
+          // Renaming a zone renames the topic it was created for, while both still share a name.
+          if (patch.name && zone.source.kind === 'topic') { const topic = boardProject.topics.find(t => t.id === zone.source.topicId); if (topic && topic.name === zone.name) topic.name = patch.name; }
+          Object.assign(zone, patch); break;
+        }
+        case 'zone-layout': {
+          needBoard(); if (!Array.isArray(data.zones) || data.zones.length > 200) throw fail('Некорректная раскладка доски.');
+          for (const item of data.zones) { const target = board.zones.find(z => z.id === item?.id); if (!target) throw fail('Зона не найдена.', 404); Object.assign(target, zonePatch({ x: item.x, y: item.y, w: item.w, h: item.h })); }
+          if (Array.isArray(data.order)) board.zones.sort((a, b) => { const ai = data.order.indexOf(a.id), bi = data.order.indexOf(b.id); return (ai < 0 ? 1e6 : ai) - (bi < 0 ? 1e6 : bi); });
+          break;
+        }
+        case 'zone-delete': needZone(); board.zones = board.zones.filter(z => z !== zone); break;
+        case 'zone-refs': {
+          needZone(); if (zone.source.kind !== 'refs') throw fail('В эту зону вещи попадают из её источника.');
+          const add = data.add || [], remove = data.remove || [];
+          if (![add, remove].every(list => Array.isArray(list) && list.length <= 500 && list.every(ref => typeof ref === 'string'))) throw fail('Некорректный список вещей.');
+          if (add.some(ref => !refExists(state, board.projectId, ref))) throw fail('Вещь не найдена в проекте.');
+          zone.source.refs = [...new Set([...add, ...zone.source.refs])].filter(ref => !remove.includes(ref));
+          if (zone.source.refs.length > 500) throw fail('В зоне может быть до 500 вещей.'); break;
+        }
+        case 'apply-proposal': { if(!ref(data.id))throw fail('Неверный ID.');const proposal = validateProposal(JSON.parse(await readFile(path.join(this.folder,'proposals',data.id+'.json'),'utf8')),state);/* A proposal adds a page and changes nothing else, so a newer store is not a conflict; its sources were re-checked above. */if(proposal.baseRevision>state.revision)throw fail('Предложение создано для версии, которой ещё нет.',409);state.pages.push({...proposal,id:id('page'),revision:0,updated:now()});state.appliedProposals=[...(state.appliedProposals||[]),data.id];break; }
         case 'undo': { const histories=(await readdir(path.join(this.folder,'history'))).filter(f=>/^\d+\.json$/.test(f)).sort((a,b)=>Number(b.slice(0,-5))-Number(a.slice(0,-5))); if(!histories.length)throw fail('Нет действия для отмены.');const old=JSON.parse(await readFile(path.join(this.folder,'history',histories[0]),'utf8'));old.revision=state.revision+1;await saveJson(this.file,old);await unlink(path.join(this.folder,'history',histories[0]));this.changed();return old; }
         default: throw fail('Неизвестное действие.');
       }
+      ensureBoards(state); pruneBoards(state);
       await saveJson(path.join(this.folder,'history',state.revision+'.json'),before);
       state.revision++;
       await saveJson(this.file,state);

@@ -1,0 +1,22 @@
+{
+  "flow": 1,
+  "id": "materials-to-page",
+  "name": "Материалы → страница",
+  "description": "Агент собирает из выбранных карточек страницу проекта. Код проверяет формат, решение принимаете вы.",
+  "roles": { "author": { "title": "Автор" } },
+  "limits": { "handoffs": 6 },
+  "start": "take",
+  "steps": {
+    "take": { "block": "input", "with": { "from": "selection" }, "next": { "taken": "write", "empty": "@stopped" } },
+    "write": {
+      "block": "work",
+      "with": {
+        "role": "author",
+        "task": "Собери из материалов понятную страницу проекта. Сохрани формулировки владельца и не добавляй фактов от себя. Если владелец оставил просьбу при запуске, следуй ей. Хранилище и исходные материалы не меняй; настройки модели, права и сессии CLI не трогай.",
+        "expects": "page-proposal"
+      },
+      "next": { "done": "me", "blocked": "@person" }
+    },
+    "me": { "block": "person", "with": { "question": "Добавить страницу в проект?" }, "next": { "accept": "@done", "return": "write" }, "limit": { "return": 3 } }
+  }
+}
